@@ -242,3 +242,10 @@ doctype_js = {"Sales Invoie" : "public/js/sales_invoice.js"}
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
+fixtures = [
+    {"dt":"Property Setter","filters":[["module","in",["Kenz Trading"]]]},
+    {"dt":"Custom Field","filters":[["module","in",["Kenz Trading"]]]},
+    # {"dt":"Web Form","filters":[["module","in",["Kenz Trading"]]]},
+
+
+]
