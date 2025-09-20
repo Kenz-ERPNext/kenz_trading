@@ -14,5 +14,37 @@
   "property_type": "Text",
   "row_name": null,
   "value": "1"
+ },
+ {
+  "default_value": null,
+  "doc_type": "Item",
+  "docstatus": 0,
+  "doctype": "Property Setter",
+  "doctype_or_field": "DocType",
+  "field_name": null,
+  "is_system_generated": 0,
+  "modified": "2025-09-20 15:56:10.443997",
+  "module": "Kenz Trading",
+  "name": "Item-main-search_fields",
+  "property": "search_fields",
+  "property_type": "Data",
+  "row_name": null,
+  "value": "item_name,description,item_group,customer_code,custom_item_name_arabic"
+ },
+ {
+  "default_value": null,
+  "doc_type": "Item",
+  "docstatus": 0,
+  "doctype": "Property Setter",
+  "doctype_or_field": "DocType",
+  "field_name": null,
+  "is_system_generated": 0,
+  "modified": "2025-09-20 16:15:19.438371",
+  "module": "Kenz Trading",
+  "name": "Item-main-quick_entry",
+  "property": "quick_entry",
+  "property_type": "Check",
+  "row_name": null,
+  "value": "0"
  }
 ]
