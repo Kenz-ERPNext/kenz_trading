@@ -1,3 +1,4 @@
+let item_uoms = {};
 frappe.ui.form.on("Sales Invoice", { 
     custom_payment_mode: function (frm) {
         set_pos_value(frm);
@@ -6,6 +7,7 @@ frappe.ui.form.on("Sales Invoice", {
         frm.set_value("custom_session_user", frappe.session.user);
         default_branch(frm)
     },
+    
 
 });
 
@@ -32,21 +34,34 @@ function default_branch(frm) {
     });
 }
 
+frappe.ui.form.on("Sales Invoice Item", {
+    item_code: function (frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
 
+        if (row.item_code) {
+            frappe.call({
+                method: "frappe.client.get",
+                args: {
+                    doctype: "Item",
+                    name: row.item_code
+                },
+                callback: function (r) {
+                    if (r.message) {
+                        let allowed_uoms = (r.message.uoms || []).map(u => u.uom);
 
-// frappe.ui.form.on("Sales Invoice Item", {
-//     item_code: function(frm, cdt, cdn) {
-//         var row = locals[cdt][cdn];
-//         if (row.item_code) {
-//             frm.set_query("uom", cdt, function() {
-//                 return {
-//                     query: "kenz_trading.events.item.get_item_uoms",
-//                     filters: {
-//                         "item_code": row.item_code
-//                     }
-//                 };
-//             });
-//         }
-//         console.log("UOM filter applied for item:", row.item_code);
-//     },
-// });
+                        frm.fields_dict["items"].grid.get_field("uom").get_query = function (doc, cdt2, cdn2) {
+                            let d = locals[cdt2][cdn2];
+                            if (d.item_code === row.item_code) {
+                                return {
+                                    filters: [["UOM", "name", "in", allowed_uoms]]
+                                };
+                            }
+                        };
+
+                        frm.refresh_field("items");
+                    }
+                }
+            });
+        }
+    }
+});
