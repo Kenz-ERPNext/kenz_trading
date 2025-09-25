@@ -120,10 +120,10 @@ doctype_js = {"Sales Invoice" : "public/js/sales_invoice.js"}
 permission_query_conditions = {
 	"Item": "kenz_trading.events.item.get_permission_query_conditions_for_item",
 }
-
-has_permission = {
-	"Item": "kenz_trading.events.item.has_permission_for_item",
-}
+#
+# has_permission = {
+# 	"Item": "kenz_trading.events.item.has_permission_for_item",
+# }
 
 # DocType Class
 # ---------------
