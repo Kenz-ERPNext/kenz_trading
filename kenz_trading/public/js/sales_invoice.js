@@ -47,45 +47,43 @@ function default_branch(frm) {
 frappe.ui.form.on("Sales Invoice Item", {
     item_code: async function (frm, cdt, cdn) {
         let row = locals[cdt][cdn];
-        if (row.item_code) {
-            await new Promise((resolve) => {
-                frappe.call({
-                    method: "frappe.client.get",
-                    args: {
-                        doctype: "Item",
-                        name: row.item_code
-                    },
-                    callback: function (r) {
-                        if (r.message) {
-                            let allowed_uoms = (r.message.uoms || []).map(u => u.uom);
-                            item_uoms[row.item_code] = allowed_uoms;  
-                            
-                            let grid_row = frm.fields_dict["items"].grid.grid_rows_by_docname[cdn];
-                            if (grid_row) {
-                                grid_row.get_field("uom").get_query = function() {
-                                    return {
-                                        filters: [["UOM", "name", "in", allowed_uoms]]
-                                    };
-                                };
-                            }
-                            
-                            if (row.uom && !allowed_uoms.includes(row.uom)) {
-                                frappe.model.set_value(cdt, cdn, "uom", "");
-                            }
-                        }
-                        resolve();
-                    }
-                });
-            });
+        if (!row.item_code) return;
 
-            frm.doc.custom_stock_details = await build_stock_table(frm, row);
-            frm.refresh_field("custom_stock_details");
-            
-            setTimeout(() => {
-                frm.doc.custom_stock_details = "";
-                frm.refresh_field("custom_stock_details");
-            }, 4000);
+        // Fetch Item details
+        let r = await frappe.call({
+            method: "frappe.client.get",
+            args: { doctype: "Item", name: row.item_code }
+        });
+
+        if (r.message) {
+            let allowed_uoms = (r.message.uoms || []).map(u => u.uom);
+            item_uoms[row.item_code] = allowed_uoms;
+
+            let grid_row = frm.fields_dict["items"].grid.grid_rows_by_docname[cdn];
+            if (grid_row) {
+                grid_row.get_field("uom").get_query = () => ({
+                    filters: [["UOM", "name", "in", allowed_uoms]]
+                });
+            }
+
+            // Reset UOM if invalid
+            if (row.uom && !allowed_uoms.includes(row.uom)) {
+                frappe.model.set_value(cdt, cdn, "uom", "");
+            }
+
+            // Force refresh item table so filter applies
+            frm.refresh_field("items");
         }
+
+        // Build stock table
+        frm.doc.custom_stock_details = await build_stock_table(frm, row);
+        frm.refresh_field("custom_stock_details");
+
+        // Clear message after 4s
+        setTimeout(() => {
+            frm.doc.custom_stock_details = "";
+            frm.refresh_field("custom_stock_details");
+        }, 4000);
     }
 });
 
