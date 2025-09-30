@@ -71,19 +71,12 @@ frappe.ui.form.on("Sales Invoice Item", {
                 frappe.model.set_value(cdt, cdn, "uom", "");
             }
 
-            // Force refresh item table so filter applies
             frm.refresh_field("items");
         }
 
-        // Build stock table
         frm.doc.custom_stock_details = await build_stock_table(frm, row);
         frm.refresh_field("custom_stock_details");
 
-        // Clear message after 4s
-        setTimeout(() => {
-            frm.doc.custom_stock_details = "";
-            frm.refresh_field("custom_stock_details");
-        }, 4000);
     }
 });
 
