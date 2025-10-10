@@ -102,6 +102,7 @@ async function build_stock_table(frm, row) {
     let stock = stock_res.message || [];
 
     if (uoms.length > 0 || stock.length > 0) {
+        
         html += `<h4>Stock Details</h4>
             <table class="table table-bordered" style="width:100%">
                 <thead>
