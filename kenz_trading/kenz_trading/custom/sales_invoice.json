@@ -785,7 +785,7 @@
    "description": null,
    "docstatus": 0,
    "dt": "Sales Invoice",
-   "fetch_from": "customer.customer_name_in_arabic",
+   "fetch_from": "customer.custom_customer_name_arabic",
    "fetch_if_empty": 0,
    "fieldname": "customer_name_in_arabic",
    "fieldtype": "Read Only",

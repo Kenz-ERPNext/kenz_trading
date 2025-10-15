@@ -45,38 +45,39 @@ function default_branch(frm) {
 }
 
 frappe.ui.form.on("Sales Invoice Item", {
-    item_code: async function (frm, cdt, cdn) {
+    item_code: function (frm, cdt, cdn) {
         let row = locals[cdt][cdn];
         if (!row.item_code) return;
 
-        // Fetch Item details
-        let r = await frappe.call({
+        // Fetch Item details for UOM handling only
+        frappe.call({
             method: "frappe.client.get",
-            args: { doctype: "Item", name: row.item_code }
+            args: { doctype: "Item", name: row.item_code },
+            callback: function(r) {
+                if (r.message) {
+                    let allowed_uoms = (r.message.uoms || []).map(u => u.uom);
+                    item_uoms[row.item_code] = allowed_uoms;
+
+                    let grid_row = frm.fields_dict["items"].grid.grid_rows_by_docname[cdn];
+                    if (grid_row) {
+                        grid_row.get_field("uom").get_query = () => ({
+                            filters: [["UOM", "name", "in", allowed_uoms]]
+                        });
+                    }
+
+                    // Reset UOM if invalid
+                    if (row.uom && !allowed_uoms.includes(row.uom)) {
+                        frappe.model.set_value(cdt, cdn, "uom", "");
+                    }
+                }
+            }
         });
 
-        if (r.message) {
-            let allowed_uoms = (r.message.uoms || []).map(u => u.uom);
-            item_uoms[row.item_code] = allowed_uoms;
-
-            let grid_row = frm.fields_dict["items"].grid.grid_rows_by_docname[cdn];
-            if (grid_row) {
-                grid_row.get_field("uom").get_query = () => ({
-                    filters: [["UOM", "name", "in", allowed_uoms]]
-                });
-            }
-
-            // Reset UOM if invalid
-            if (row.uom && !allowed_uoms.includes(row.uom)) {
-                frappe.model.set_value(cdt, cdn, "uom", "");
-            }
-
-            frm.refresh_field("items");
-        }
-
-        frm.doc.custom_stock_details = await build_stock_table(frm, row);
-        frm.refresh_field("custom_stock_details");
-
+        // Build and display stock details
+        build_stock_table(frm, row).then(html => {
+            frm.doc.custom_stock_details = html;
+            frm.refresh_field("custom_stock_details");
+        });
     }
 });
 
