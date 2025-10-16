@@ -20,33 +20,13 @@ frappe.ui.form.on("Sales Invoice", {
             }
         };
     },
-    onload(frm) {
-      if (frm.doc.update_stock) {
-        frappe.call({
-          method: "frappe.client.get_list",
-          args: {
-              doctype: "Warehouse",
-              filters: { "custom_is_default": 1},
-              fields: ["name"],
-              limit_page_length: 1
-          },
-          callback: function(r) {
-              if (r.message && r.message.length > 0) {
-                  frm.set_value('set_warehouse', r.message[0].name);
-                  frm.refresh_field('set_warehouse');
-                  frappe.show_alert({
-                      message: 'Warehouse set to: ' + r.message.name,
-                      indicator: 'green'
-                  });
-              } else {
-                  frappe.msgprint(__('Warehouse "Stores - A" not found.'));
-              }
-          }
-        });
-      } else {
-        frm.set_value('set_warehouse', '');
-        frm.refresh_field('set_warehouse');
-      }
+    onload: function(frm) {
+        // Set default warehouse on form load if update_stock is enabled
+        set_default_warehouse(frm);
+    },
+    update_stock: function(frm) {
+        // Set or clear warehouse when update_stock is toggled
+        set_default_warehouse(frm);
     }
 });
 
@@ -70,6 +50,35 @@ function default_branch(frm) {
             }
         },
     });
+}
+
+function set_default_warehouse(frm) {
+    if (frm.doc.update_stock && frm.doc.company) {
+        frappe.call({
+            method: "kenz_trading.events.warehouse.get_default_warehouse",
+            args: {
+                company: frm.doc.company
+            },
+            callback: function(r) {
+                if (r.message) {
+                    frm.set_value('set_warehouse', r.message);
+                    frm.refresh_field('set_warehouse');
+                } else {
+                    // Clear warehouse if no default found
+                    if (!frm.doc.set_warehouse) {
+                        frappe.show_alert({
+                            message: __('No default warehouse found. Please set a warehouse with "Is Default" checked.'),
+                            indicator: 'orange'
+                        }, 5);
+                    }
+                }
+            }
+        });
+    } else if (!frm.doc.update_stock) {
+        // Clear warehouse when update_stock is disabled
+        frm.set_value('set_warehouse', '');
+        frm.refresh_field('set_warehouse');
+    }
 }
 
 frappe.ui.form.on("Sales Invoice Item", {
