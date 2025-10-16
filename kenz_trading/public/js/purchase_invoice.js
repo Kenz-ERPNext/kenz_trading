@@ -1,17 +1,16 @@
 frappe.ui.form.on('Purchase Invoice', {
-    update_stock: function(frm) {
+    update_stock(frm) {
         if (frm.doc.update_stock) {
             frappe.call({
                 method: "frappe.client.get_list",
                 args: {
                     doctype: "Warehouse",
-                    filters: { "name": "Stores - A"},
+                    filters: { "custom_is_default": 1},
                     fields: ["name"],
                     limit_page_length: 1
                 },
                 callback: function(r) {
                     if (r.message && r.message.length > 0) {
-                        // Warehouse exists, set it in the field
                         frm.set_value('set_warehouse', r.message[0].name);
                         frm.refresh_field('set_warehouse');
                         frappe.show_alert({
@@ -24,11 +23,8 @@ frappe.ui.form.on('Purchase Invoice', {
                 }
             });
         } else {
-            // If checkbox unchecked, clear the warehouse
             frm.set_value('set_warehouse', '');
             frm.refresh_field('set_warehouse');
         }
     }
 });
-
-
