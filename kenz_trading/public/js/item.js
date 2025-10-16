@@ -1,5 +1,5 @@
 frappe.ui.form.on('Item', {
-  async onload_post_render(frm) {
+  onload(frm) {
     if (frm.is_new()) {
       if (!frm.doc.custom_branches?.length) {
         const branchRes = await frappe.db.get_value('Branch', { custom_is_default: 1 }, 'name');
