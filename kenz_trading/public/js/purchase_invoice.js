@@ -1,5 +1,5 @@
 frappe.ui.form.on('Purchase Invoice', {
-    update_stock(frm) {
+    async onload_post_render(frm) {
         if (frm.doc.update_stock) {
             frappe.call({
                 method: "frappe.client.get_list",
