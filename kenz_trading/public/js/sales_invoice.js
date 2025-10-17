@@ -27,6 +27,18 @@ frappe.ui.form.on("Sales Invoice", {
     update_stock: function(frm) {
         // Set or clear warehouse when update_stock is toggled
         set_default_warehouse(frm);
+    },
+    refresh(frm) {
+      setTimeout(() => {
+          unhide_field('project');
+          frm.refresh_field('project');
+      }, 500);
+    },
+    is_pos(frm) {
+      setTimeout(() => {
+          unhide_field('project');
+          frm.refresh_field('project');
+      }, 500);
     }
 });
 
