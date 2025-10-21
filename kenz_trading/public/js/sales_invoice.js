@@ -3,6 +3,16 @@ let item_uoms = {};
 frappe.ui.form.on("Sales Invoice", {
     custom_payment_mode: function (frm) {
         set_pos_value(frm);
+        // Always show project field regardless of POS mode
+        frm.set_df_property('project', 'hidden', 0);
+    },
+    is_pos: function(frm) {
+        // Always show project field regardless of POS mode
+        frm.set_df_property('project', 'hidden', 0);
+    },
+    refresh: function(frm) {
+        // Always show project field regardless of POS mode
+        frm.set_df_property('project', 'hidden', 0);
     },
     customer: function (frm) {
         frm.set_value("custom_session_user", frappe.session.user);
@@ -21,6 +31,8 @@ frappe.ui.form.on("Sales Invoice", {
         };
     },
     onload: function(frm) {
+        // Always show project field regardless of POS mode
+        frm.set_df_property('project', 'hidden', 0);
         // Set default warehouse on form load if update_stock is enabled
         set_default_warehouse(frm);
     },
