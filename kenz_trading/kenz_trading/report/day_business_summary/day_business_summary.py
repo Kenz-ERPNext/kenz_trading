@@ -10,46 +10,62 @@ def execute(filters=None):
     data = []
     columns = get_columns()
 
-    # Collect data from all sections
+    # Define HTML color styles
+    sales_style = 'background-color:#d1f2eb; font-weight:bold;'     # soft green-blue
+    purchase_style = 'background-color:#f5b7b1; font-weight:bold;'  # light coral red
+    neutral_style = 'background-color:#d6eaf8; font-weight:bold;'   # pale blue
+    red_style = 'background-color:#71FC0F; font-weight:bold;'       # bright lime green
+
+    # Define sections with matching colors
     sections = [
-        ("Sales Summary", get_sales_summary(filters)),
-        ("Purchase Summary", get_purchase_summary(filters)),
-        ("Cash & Bank Summary", get_cash_bank_summary(filters)),
-        ("Sales Details", get_sales_details(filters)),
-        ("Sales Return Details", get_sales_return_details(filters)),
-        ("Purchase Details", get_purchase_details(filters)),
-        ("Purchase Return", get_purchase_return(filters)),
-        ("Receipts", get_receipt_details(filters)),
-        ("Payments", get_payment_details(filters)),
-        ("Contra (Journal Entry)", get_contra_details(filters))
+        ("Sales Summary", get_sales_summary(filters), sales_style),
+        ("Purchase Summary", get_purchase_summary(filters), purchase_style),
+        ("Sales Details", get_sales_details(filters), sales_style),
+        ("Sales Return Details", get_sales_return_details(filters), sales_style),
+        ("Purchase Details", get_purchase_details(filters), purchase_style),
+        ("Purchase Return", get_purchase_return(filters), purchase_style),
+        ("Cash & Bank Summary", get_cash_bank_summary(filters), neutral_style),
+        ("Receipts", get_receipt_details(filters), neutral_style),
+        ("Payments", get_payment_details(filters), red_style),
+        ("Contra (Journal Entry)", get_contra_details(filters), neutral_style)
     ]
 
-    # Build data
-    for title, rows in sections:
-        if rows:
+    for title, rows, style in sections:
+        data.append({
+            "sl_no": "",
+            "voucher_no": f"<div style='{style}'>&nbsp;▶ {title}</div>",
+            "particulars": "",
+            "reference": "",
+            "cash": "",
+            "bank": "",
+            "cheque": "",
+            "total": "",
+            "account": ""
+        })
+
+        if not rows:
             data.append({
-                "sl_no": "",
-                "voucher_no": _("▶ ") + title,
-                "particulars": "",
-                "reference": "",
-                "cash": "",
-                "bank": "",
-                "cheque": "",
-                "total": "",
-                "account": ""
+                "voucher_no": "No records found",
+                "total": ""
             })
-            data += rows
-            data.append({
-                "sl_no": "",
-                "voucher_no": "",
-                "particulars": "",
-                "reference": "",
-                "cash": "",
-                "bank": "",
-                "cheque": "",
-                "total": "",
-                "account": ""
-            })
+        else:
+            for r in rows:
+                if "Total" in str(r.get("voucher_no", "")):
+                    r["voucher_no"] = f"<b>{r['voucher_no']}</b>"
+                    r["total"] = f"<b>{flt(r['total'], 2)}</b>"
+                data.append(r)
+
+        data.append({
+            "sl_no": "",
+            "voucher_no": "",
+            "particulars": "",
+            "reference": "",
+            "cash": "",
+            "bank": "",
+            "cheque": "",
+            "total": "",
+            "account": ""
+        })
 
     return columns, data
 
@@ -80,33 +96,32 @@ def get_sales_summary(filters):
     company = filters.get("company")
     posting_date = filters.get("posting_date")
 
-    # Cash Sales
-    cash_sales = frappe.db.sql("""
-        SELECT IFNULL(SUM(si.base_grand_total), 0)
+    def get_value(query):
+        value = frappe.db.sql(query, {"company": company, "posting_date": posting_date})
+        return flt(value[0][0]) if value and value[0][0] is not None else 0.0
+
+    cash_sales = get_value("""
+        SELECT SUM(si.base_grand_total)
         FROM `tabSales Invoice` si
         JOIN `tabPayment Entry Reference` per ON per.reference_name = si.name
         JOIN `tabPayment Entry` pe ON pe.name = per.parent
         WHERE pe.docstatus = 1 AND pe.mode_of_payment = 'Cash'
-        AND si.is_return = 0
-        AND si.company = %(company)s
+        AND si.is_return = 0 AND si.company = %(company)s
         AND si.posting_date = %(posting_date)s
-    """, {"company": company, "posting_date": posting_date})[0][0]
+    """)
 
-    # Bank Sales
-    bank_sales = frappe.db.sql("""
-        SELECT IFNULL(SUM(si.base_grand_total), 0)
+    bank_sales = get_value("""
+        SELECT SUM(si.base_grand_total)
         FROM `tabSales Invoice` si
         JOIN `tabPayment Entry Reference` per ON per.reference_name = si.name
         JOIN `tabPayment Entry` pe ON pe.name = per.parent
         WHERE pe.docstatus = 1 AND pe.mode_of_payment = 'Bank'
-        AND si.is_return = 0
-        AND si.company = %(company)s
+        AND si.is_return = 0 AND si.company = %(company)s
         AND si.posting_date = %(posting_date)s
-    """, {"company": company, "posting_date": posting_date})[0][0]
+    """)
 
-    # Credit Sales (no payment entry)
-    credit_sales = frappe.db.sql("""
-        SELECT IFNULL(SUM(base_grand_total), 0)
+    credit_sales = get_value("""
+        SELECT SUM(base_grand_total)
         FROM `tabSales Invoice` si
         WHERE si.docstatus = 1 AND si.is_return = 0
         AND si.company = %(company)s
@@ -115,23 +130,20 @@ def get_sales_summary(filters):
             SELECT reference_name FROM `tabPayment Entry Reference`
             WHERE reference_doctype = 'Sales Invoice'
         )
-    """, {"company": company, "posting_date": posting_date})[0][0]
+    """)
 
-    # Sales Return - Cash
-    sales_return_cash = frappe.db.sql("""
-        SELECT IFNULL(SUM(si.base_grand_total), 0)
+    sales_return_cash = get_value("""
+        SELECT SUM(si.base_grand_total)
         FROM `tabSales Invoice` si
         JOIN `tabPayment Entry Reference` per ON per.reference_name = si.name
         JOIN `tabPayment Entry` pe ON pe.name = per.parent
         WHERE pe.docstatus = 1 AND pe.mode_of_payment = 'Cash'
-        AND si.is_return = 1
-        AND si.company = %(company)s
+        AND si.is_return = 1 AND si.company = %(company)s
         AND si.posting_date = %(posting_date)s
-    """, {"company": company, "posting_date": posting_date})[0][0]
+    """)
 
-    # Sales Return - Credit
-    sales_return_credit = frappe.db.sql("""
-        SELECT IFNULL(SUM(base_grand_total), 0)
+    sales_return_credit = get_value("""
+        SELECT SUM(base_grand_total)
         FROM `tabSales Invoice` si
         WHERE si.docstatus = 1 AND si.is_return = 1
         AND si.company = %(company)s
@@ -140,29 +152,26 @@ def get_sales_summary(filters):
             SELECT reference_name FROM `tabPayment Entry Reference`
             WHERE reference_doctype = 'Sales Invoice'
         )
-    """, {"company": company, "posting_date": posting_date})[0][0]
+    """)
 
-    total_net_sales = (cash_sales + credit_sales + bank_sales) - (sales_return_cash + sales_return_credit)
+    total_sales = (cash_sales + credit_sales + bank_sales) - (sales_return_cash + sales_return_credit)
 
-    # Return formatted list for your report table
+    # Always return list (even if all are zero)
+
+
     return [
-        {"voucher_no": "Cash Sales", "total": cash_sales},
-        {"voucher_no": "Credit Sales", "total": credit_sales},
-        {"voucher_no": "Bank Sales", "total": bank_sales},
-        {"voucher_no": "Sales Return - Cash", "total": sales_return_cash},
-        {"voucher_no": "Sales Return - Credit", "total": sales_return_credit},
-        {"voucher_no": "Total Net Sales", "total": total_net_sales}
-    ]
-    return rows
-
-
-
+		{"voucher_no": "Cash Sales", "total": cash_sales or 0},
+		{"voucher_no": "Credit Sales", "total": credit_sales or 0},
+		{"voucher_no": "Bank Sales", "total": bank_sales or 0},
+		{"voucher_no": "Sales Return - Cash", "total": sales_return_cash or 0},
+		{"voucher_no": "Sales Return - Credit", "total": sales_return_credit or 0},
+		{"voucher_no": "Total Net Sales", "total": total_sales or 0},
+	]	
 
 def get_purchase_summary(filters):
     company = filters.get("company")
     posting_date = filters.get("posting_date")
 
-    # Cash Purchases
     cash_purchase = frappe.db.sql("""
         SELECT IFNULL(SUM(pi.base_grand_total), 0)
         FROM `tabPurchase Invoice` pi
@@ -174,7 +183,6 @@ def get_purchase_summary(filters):
         AND pi.posting_date = %(posting_date)s
     """, {"company": company, "posting_date": posting_date})[0][0]
 
-    # Bank Purchases
     bank_purchase = frappe.db.sql("""
         SELECT IFNULL(SUM(pi.base_grand_total), 0)
         FROM `tabPurchase Invoice` pi
@@ -186,7 +194,6 @@ def get_purchase_summary(filters):
         AND pi.posting_date = %(posting_date)s
     """, {"company": company, "posting_date": posting_date})[0][0]
 
-    # Credit Purchases (no payment entry)
     credit_purchase = frappe.db.sql("""
         SELECT IFNULL(SUM(base_grand_total), 0)
         FROM `tabPurchase Invoice` pi
@@ -199,7 +206,6 @@ def get_purchase_summary(filters):
         )
     """, {"company": company, "posting_date": posting_date})[0][0]
 
-    # Purchase Return - Cash
     purchase_return_cash = frappe.db.sql("""
         SELECT IFNULL(SUM(pi.base_grand_total), 0)
         FROM `tabPurchase Invoice` pi
@@ -211,7 +217,6 @@ def get_purchase_summary(filters):
         AND pi.posting_date = %(posting_date)s
     """, {"company": company, "posting_date": posting_date})[0][0]
 
-    # Purchase Return - Credit
     purchase_return_credit = frappe.db.sql("""
         SELECT IFNULL(SUM(base_grand_total), 0)
         FROM `tabPurchase Invoice` pi
@@ -224,6 +229,7 @@ def get_purchase_summary(filters):
         )
     """, {"company": company, "posting_date": posting_date})[0][0]
 
+    # ✅ Correct total calculation
     total_net_purchase = (cash_purchase + credit_purchase + bank_purchase) - (purchase_return_cash + purchase_return_credit)
 
     return [
