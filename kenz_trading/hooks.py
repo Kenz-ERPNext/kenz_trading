@@ -137,6 +137,10 @@ permission_query_conditions = {
 # 	"ToDo": "custom_app.overrides.CustomToDo"
 # }
 
+
+# override_doctype_class = {
+#     "Item": "kenz_trading.events.item.CustomItem"
+# }
 # Document Events
 # ---------------
 # Hook on document methods and events
@@ -147,7 +151,10 @@ doc_events = {
     },
     "Warehouse":{
         "validate":"kenz_trading.events.warehouse.validate_warehouse"
-    }
+    },
+    # "Item": {
+    #     "before_validate": "kenz_trading.events.item.get_next_item_code"
+    # }
 #     "Purchase Invoice":{
 #         "before_insert":"kenz_trading.events.purchase_invoice.set_warehouse_as_default"
 #     }
@@ -250,10 +257,29 @@ doc_events = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
+# fixtures = [
+#     {"dt":"Property Setter","filters":[["module","in",["Kenz Trading"]]]},
+#     {"dt":"Custom Field","filters":[["module","in",["Kenz Trading"]]]},
+#     # {"dt":"Web Form","filters":[["module","in",["Kenz Trading"]]]},
+
+
+# ]
+
+
 fixtures = [
-    {"dt":"Property Setter","filters":[["module","in",["Kenz Trading"]]]},
-    {"dt":"Custom Field","filters":[["module","in",["Kenz Trading"]]]},
-    # {"dt":"Web Form","filters":[["module","in",["Kenz Trading"]]]},
-
-
+    {
+        "doctype": "Property Setter",
+        "filters": [
+            ["module", "in", ["Kenz Trading"]]
+        ]
+    },
+    {
+        "doctype": "Custom Field",
+        "filters": [
+            ["module", "in", ["Kenz Trading"]],
+            ["name", "in", [
+                "Sales Invoice Item-custom_remark"
+                ]]
+        ]
+    }
 ]

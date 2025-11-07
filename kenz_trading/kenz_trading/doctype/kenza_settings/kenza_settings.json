@@ -5,7 +5,11 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "user_default_branch"
+  "user_default_branch",
+  "item_section",
+  "default_item_code",
+  "item_code_series",
+  "column_break_bmel"
  ],
  "fields": [
   {
@@ -13,13 +17,35 @@
    "fieldtype": "Table",
    "label": "User Default Branch",
    "options": "User Branch"
+  },
+  {
+   "fieldname": "item_section",
+   "fieldtype": "Section Break",
+   "label": "Item "
+  },
+  {
+   "default": "0",
+   "fieldname": "default_item_code",
+   "fieldtype": "Check",
+   "label": "Default Item Code "
+  },
+  {
+   "fieldname": "column_break_bmel",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: doc.default_item_code;",
+   "fieldname": "item_code_series",
+   "fieldtype": "Data",
+   "label": "Item Code Series",
+   "mandatory_depends_on": "eval: doc.default_item_code;"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-09-24 14:37:41.248591",
+ "modified": "2025-11-07 08:16:01.279622",
  "modified_by": "Administrator",
  "module": "Kenz Trading",
  "name": "Kenza Settings",

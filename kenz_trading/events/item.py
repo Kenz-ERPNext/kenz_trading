@@ -1,4 +1,7 @@
 import frappe
+from erpnext.stock.doctype.item.item import Item
+import re
+
 
 def get_permission_query_conditions_for_item(user=None):
     if not user:
@@ -27,3 +30,4 @@ def get_permission_query_conditions_for_item(user=None):
             SELECT DISTINCT parent FROM `tabBranches`
         ))
     """
+ 
