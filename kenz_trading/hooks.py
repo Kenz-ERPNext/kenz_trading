@@ -270,7 +270,17 @@ fixtures = [
     {
         "doctype": "Property Setter",
         "filters": [
-            ["module", "in", ["Kenz Trading"]]
+            ["module", "in", ["Kenz Trading"]],
+            ["name", "in", [
+                "Sales Invoice-items_section-collapsible",
+                "Sales Invoice-main-field_order",
+
+                "Sales Order-sec_warehouse-collapsible",
+                "Sales Order-main-field_order",
+                "Purchase Invoice-sec_warehouse-collapsible",
+                "Purchase Invoice-main-field_order"
+            ]]
+
         ]
     },
     {
@@ -278,8 +288,30 @@ fixtures = [
         "filters": [
             ["module", "in", ["Kenz Trading"]],
             ["name", "in", [
-                "Sales Invoice Item-custom_remark"
+                "Sales Invoice Item-custom_remark",
+                "Sales Invoice-custom_sub_details",
+                "Sales Invoice-custom_core",
+                "Sales Invoice-custom_test",
+                "Sales Invoice-custom_a",
+                "Sales Invoice-custom_b",
+                "Sales Invoice-custom_total",
+                "Sales Invoice-custom_total_test",
+                "Sales Invoice-custom_c",
+
+                "Sales Order-custom_new",
+                "Sales Order-custom_test",
+                "Sales Order-custom_a",
+                "Sales Order-custom_sub_details",
+                "Sales Order-custom_total",
+
+                "Purchase Invoice-custom_new",
+                "Purchase Invoice-custom_a",
+                "Purchase Invoice-custom_b",
+                "Purchase Invoice-custom_sub_details",
+                "Purchase Invoice-custom_totals_kenz"
+
+
                 ]]
-        ]
+        ] 
     }
 ]
