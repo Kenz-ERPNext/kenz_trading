@@ -267,26 +267,16 @@ doc_events = {
 
 
 fixtures = [
-   {"dt":"Property Setter",
-				"filters": [
-					["name", "in",[
-                    "Sales Invoice-items_section-collapsible",
-                    "Sales Invoice-main-field_order",
-
-                    "Sales Order-sec_warehouse-collapsible",
-                    "Sales Order-main-field_order",
-                    
-                    "Purchase Invoice-sec_warehouse-collapsible",
-                    "Purchase Invoice-main-field_order"
-                ]]
-
-        ]
-    },
+   
     {
         "doctype": "Custom Field",
         "filters": [
-            ["module", "in", ["Kenz Trading"]],
-            ["name", "in", [
+            [
+                "name",
+                "in",
+
+                
+                [
                 "Sales Invoice Item-custom_remark",
                 "Sales Invoice-custom_sub_details",
                 "Sales Invoice-custom_core",
@@ -307,10 +297,27 @@ fixtures = [
                 "Purchase Invoice-custom_a",
                 "Purchase Invoice-custom_b",
                 "Purchase Invoice-custom_sub_details",
-                "Purchase Invoice-custom_totals_kenz"
+                "Purchase Invoice-custom_totals_kenz",
 
 
                 ]]
         ] 
-    }
+    },
+
+    {"dt":"Property Setter",
+				"filters": [
+					["name", "in",[
+
+                    "Sales Invoice-items_section-collapsible",
+                    "Sales Invoice-main-field_order",
+
+                    "Sales Order-sec_warehouse-collapsible",
+                    "Sales Order-main-field_order",
+
+                    "Purchase Invoice-sec_warehouse-collapsible",
+                    "Purchase Invoice-main-field_order",
+                ]]
+
+        ]
+    },
 ]
