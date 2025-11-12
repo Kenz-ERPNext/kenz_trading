@@ -299,12 +299,15 @@ fixtures = [
                 "Purchase Invoice-custom_sub_details",
                 "Purchase Invoice-custom_totals_kenz",
 
+                "Company-custom_cr_no",
+                "Customer-custom_cr_no"
+
 
                 ]]
         ] 
     },
 
-    {"dt":"Property Setter",
+    {"doctype":"Property Setter",
 				"filters": [
 					["name", "in",[
 
