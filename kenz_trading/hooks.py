@@ -300,7 +300,17 @@ fixtures = [
                 "Purchase Invoice-custom_totals_kenz",
 
                 "Company-custom_cr_no",
-                "Customer-custom_cr_no"
+                "Customer-custom_cr_no",
+
+                "Sales Invoice-custom_additional_information",
+                "Sales Invoice-custom_attention",
+                "Sales Invoice-custom_due_date",
+                "Sales Invoice-custom_a1",
+                "Sales Invoice-custom_payment_term",
+                "Sales Invoice-custom_location",
+                "Sales Invoice-custom_delivery_note_no",
+                "Sales Invoice-custom_notes"
+                "Sales Invoice-custom_note"
 
 
                 ]]
