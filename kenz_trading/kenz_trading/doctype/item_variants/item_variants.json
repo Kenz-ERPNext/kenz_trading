@@ -1,0 +1,82 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:variant_name",
+ "creation": "2025-11-25 12:06:15.536796",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "variant_name",
+  "main_item",
+  "column_break_kdzw",
+  "customer",
+  "section_break_enbq",
+  "variant_list"
+ ],
+ "fields": [
+  {
+   "fieldname": "variant_name",
+   "fieldtype": "Data",
+   "label": "Variant Name",
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_kdzw",
+   "fieldtype": "Column Break",
+   "read_only": 1
+  },
+  {
+   "fieldname": "main_item",
+   "fieldtype": "Link",
+   "label": "Main Item",
+   "options": "Item",
+   "read_only": 1
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_enbq",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "variant_list",
+   "fieldtype": "Table",
+   "label": "Variant List",
+   "options": "Variant List",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-11-25 13:12:54.129160",
+ "modified_by": "Administrator",
+ "module": "Kenz Trading",
+ "name": "Item Variants",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

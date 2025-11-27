@@ -9,7 +9,15 @@
   "item_section",
   "default_item_code",
   "item_code_series",
-  "column_break_bmel"
+  "column_break_bmel",
+  "sales_invoice_section",
+  "activate_item_variant_save",
+  "show_item_variant_table",
+  "column_break_ixxn",
+  "show_last_5_sales_and_purchase_transaction",
+  "sale_search_window",
+  "purchase_search_window",
+  "item_qty_search_window"
  ],
  "fields": [
   {
@@ -39,13 +47,58 @@
    "fieldtype": "Data",
    "label": "Item Code Series",
    "mandatory_depends_on": "eval: doc.default_item_code;"
+  },
+  {
+   "fieldname": "sales_invoice_section",
+   "fieldtype": "Section Break",
+   "label": "Sales Invoice"
+  },
+  {
+   "default": "0",
+   "fieldname": "activate_item_variant_save",
+   "fieldtype": "Check",
+   "label": "Activate Item Variant Save"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_item_variant_table",
+   "fieldtype": "Check",
+   "label": "Show Item Variant Table"
+  },
+  {
+   "fieldname": "column_break_ixxn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_last_5_sales_and_purchase_transaction",
+   "fieldtype": "Check",
+   "label": "Show Last 5 sales and purchase Transaction"
+  },
+  {
+   "default": "0",
+   "fieldname": "sale_search_window",
+   "fieldtype": "Check",
+   "label": "Sale Search Window"
+  },
+  {
+   "default": "0",
+   "fieldname": "purchase_search_window",
+   "fieldtype": "Check",
+   "label": "Purchase Search Window"
+  },
+  {
+   "default": "0",
+   "fieldname": "item_qty_search_window",
+   "fieldtype": "Check",
+   "label": "Item Qty search Window"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-11-07 08:16:01.279622",
+ "modified": "2025-11-27 10:57:44.705109",
  "modified_by": "Administrator",
  "module": "Kenz Trading",
  "name": "Kenza Settings",

@@ -152,6 +152,14 @@ doc_events = {
     "Warehouse":{
         "validate":"kenz_trading.events.warehouse.validate_warehouse"
     },
+
+    "Sales Invoice":{
+        "on_submit":"kenz_trading.events.sales_invoice.on_submits"
+    },
+
+
+
+
     # "Item": {
     #     "before_validate": "kenz_trading.events.item.get_next_item_code"
     # }
@@ -310,7 +318,13 @@ fixtures = [
                 "Sales Invoice-custom_location",
                 "Sales Invoice-custom_delivery_note_no",
                 "Sales Invoice-custom_notes"
-                "Sales Invoice-custom_note"
+                "Sales Invoice-custom_note",
+                "Sales Invoice-custom_bank_details",
+                "Sales Invoice-custom_po_no",
+                "Quotation-custom_po_no",
+                "Sales Invoice-custom_five_transaction",
+                "Sales Invoice-custom_last_five_transaction_details"
+
 
 
                 ]]
@@ -329,6 +343,7 @@ fixtures = [
 
                     "Purchase Invoice-sec_warehouse-collapsible",
                     "Purchase Invoice-main-field_order",
+
                 ]]
 
         ]
