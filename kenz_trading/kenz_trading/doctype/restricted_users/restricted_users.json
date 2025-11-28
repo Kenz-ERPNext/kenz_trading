@@ -1,0 +1,114 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-11-28 08:19:09.388950",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "user",
+  "section_break_akdp",
+  "column_break_pfgh",
+  "dont_see_stock_details_table",
+  "dont_see_available_qty",
+  "dont_see_buying_price",
+  "dont_see_selling_price",
+  "sales_details_window_column",
+  "dont_see_sales_details",
+  "purchase_details_window_column",
+  "dont_see_purchase_details",
+  "item_qty_window_column",
+  "dont_see_item_qty"
+ ],
+ "fields": [
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "User",
+   "options": "User"
+  },
+  {
+   "fieldname": "column_break_pfgh",
+   "fieldtype": "Column Break",
+   "label": "Stock Details Table"
+  },
+  {
+   "default": "0",
+   "fieldname": "dont_see_available_qty",
+   "fieldtype": "Check",
+   "label": "Don't See Available Qty"
+  },
+  {
+   "default": "0",
+   "fieldname": "dont_see_buying_price",
+   "fieldtype": "Check",
+   "label": "Don't See Buying Price"
+  },
+  {
+   "default": "0",
+   "fieldname": "dont_see_selling_price",
+   "fieldtype": "Check",
+   "label": "Don't See Selling Price"
+  },
+  {
+   "default": "0",
+   "fieldname": "dont_see_stock_details_table",
+   "fieldtype": "Check",
+   "label": "Don't See Stock Details Table"
+  },
+  {
+   "fieldname": "section_break_akdp",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "dont_see_sales_details",
+   "fieldtype": "Check",
+   "label": "Don't See Sales Details"
+  },
+  {
+   "default": "0",
+   "fieldname": "dont_see_purchase_details",
+   "fieldtype": "Check",
+   "label": "Don't See Purchase Details"
+  },
+  {
+   "fieldname": "item_qty_window_column",
+   "fieldtype": "Column Break",
+   "label": "Item Qty Window"
+  },
+  {
+   "default": "0",
+   "fieldname": "dont_see_item_qty",
+   "fieldtype": "Check",
+   "label": "Don't See Item Qty"
+  },
+  {
+   "fieldname": "sales_details_window_column",
+   "fieldtype": "Column Break",
+   "label": "Sales Details Window"
+  },
+  {
+   "fieldname": "purchase_details_window_column",
+   "fieldtype": "Column Break",
+   "label": "Purchase Details Window"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-11-28 08:32:29.655772",
+ "modified_by": "Administrator",
+ "module": "Kenz Trading",
+ "name": "Restricted Users",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

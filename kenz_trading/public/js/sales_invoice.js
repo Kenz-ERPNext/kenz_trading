@@ -1,6 +1,56 @@
 let item_uoms = {};
 
 frappe.ui.form.on("Sales Invoice", {
+
+
+    before_save: async function(frm) {
+        // ----------------------------
+        // Minimum / Maximum Rate Validation
+        // ----------------------------
+        const minmax_enabled = await is_rate_validation_enabled();
+        if (minmax_enabled) {
+            for (let row of frm.doc.items || []) {
+                if (!row.item_code || !row.rate) continue;
+
+                const limits = await get_item_limits(row.item_code);
+                if (!limits) continue;
+
+                if (limits.min && flt(row.rate) < flt(limits.min)) {
+                    frappe.throw(
+                        __(`Row ${row.idx}: Rate of ${row.item_code} cannot be less than ${limits.min}`)
+                    );
+                }
+
+                if (limits.max && flt(row.rate) > flt(limits.max)) {
+                    frappe.throw(
+                        __(`Row ${row.idx}: Rate of ${row.item_code} cannot exceed ${limits.max}`)
+                    );
+                }
+            }
+        }
+
+        // ----------------------------
+        // Last Invoice Rate Validation
+        // ----------------------------
+        const last_rate_enabled = await is_last_invoice_rate_enabled();
+        if (last_rate_enabled) {
+            for (let row of frm.doc.items || []) {
+                if (!row.item_code || !row.rate) continue;
+
+                const last_rate = await get_last_sales_rate(row.item_code);
+                if (!last_rate) continue;
+
+                if (flt(row.rate) < flt(last_rate)) {
+                    frappe.throw(
+                        __(`Row ${row.idx}: Rate of ${row.item_code} cannot be less than last sales invoice rate ${last_rate}`)
+                    );
+                }
+            }
+        }
+    },
+
+
+
     custom_payment_mode: function (frm) {
         set_pos_value(frm);
         // Always show project field regardless of POS mode
@@ -45,92 +95,241 @@ frappe.ui.form.on("Sales Invoice", {
 
     refresh(frm) {
 
-        frappe.db.get_single_value('Kenza Settings', 'sale_search_window').then(value => {
+        const current_user = frappe.session.user;
 
-            // Only show button if enabled
-            if (value) {
+        // Get full single document of Kenza Settings
+        frappe.call({
+            method: "frappe.client.get",
+            args: {
+                doctype: "Kenza Settings",
+                name: "Kenza Settings"
+            }
+        }).then(r => {
+
+            const settings = r.message || {};
+            const restricted_users = settings.restricted_users || [];
+
+            // Check if current user is restricted
+            const is_restricted = restricted_users.some(row =>
+                row.user === current_user && row.dont_see_sales_details === 1
+            );
+
+            // If restricted → don't show button or shortcut
+            if (is_restricted) {
+                return;
+            }
+
+            // Main on/off switch
+            if (settings.sale_search_window) {
+
+                // Show button
                 cur_frm.add_custom_button(__('Sales Details'), () => {
                     show_last_sales_dialog(frm);
                 });
-            }
 
-            // Keyboard shortcut
-            $(document).off('keydown.item_qty'); // prevent duplicate events
-            $(document).on('keydown.item_qty', function (e) {
+                // Remove previous event to avoid duplicates
+                $(document).off('keydown.item_qty');
 
-                // Shift + S
-                if (e.shiftKey && e.key.toLowerCase() === "s") {
-                    e.preventDefault();   // prevent default browser behavior
+                // Shortcut SHIFT + S
+                $(document).on('keydown.item_qty', function (e) {
 
-                    if (value && cur_frm && cur_frm.doctype === "Sales Invoice") {
-                        show_last_sales_dialog(cur_frm);
+                    if (e.shiftKey && e.key.toLowerCase() === "s") {
+                        e.preventDefault();
+
+                        if (cur_frm && cur_frm.doctype === "Sales Invoice") {
+                            show_last_sales_dialog(cur_frm);
+                        }
                     }
-                }
-            });
+                });
 
+            }
         });
 
 
 
+        // frappe.db.get_single_value('Kenza Settings', 'sale_search_window').then(value => {
+
+        //     // Only show button if enabled
+        //     if (value) {
+        //         cur_frm.add_custom_button(__('Sales Details'), () => {
+        //             show_last_sales_dialog(frm);
+        //         });
+        //     }
+
+        //     // Keyboard shortcut
+        //     $(document).off('keydown.item_qty'); // prevent duplicate events
+        //     $(document).on('keydown.item_qty', function (e) {
+
+        //         // Shift + S
+        //         if (e.shiftKey && e.key.toLowerCase() === "s") {
+        //             e.preventDefault();   // prevent default browser behavior
+
+        //             if (value && cur_frm && cur_frm.doctype === "Sales Invoice") {
+        //                 show_last_sales_dialog(cur_frm);
+        //             }
+        //         }
+        //     });
+
+        // });
 
 
 
-        frappe.db.get_single_value('Kenza Settings', 'purchase_search_window').then(value => {
+        const current_users = frappe.session.user;
 
-            // Only show button if enabled
-            if (value) {
-                cur_frm.add_custom_button(__('Purchase Details'), () => {
-                    show_last_purchase_dialog(cur_frm);
-                });
+        // Get full single document of Kenza Settings
+        frappe.call({
+            method: "frappe.client.get",
+            args: {
+                doctype: "Kenza Settings",
+                name: "Kenza Settings"
             }
+        }).then(r => {
 
-            // Keyboard shortcut
-            $(document).off('keydown.item_qty_purchase'); // prevent duplicates
-            $(document).on('keydown.item_qty_purchase', function (e) {
+            const settings = r.message || {};
+            const restricted_users = settings.restricted_users || [];
 
-                // Shift + P
-                if (e.shiftKey && e.key.toLowerCase() === "p") {
+            // Check if current user is restricted for PURCHASE
+            const is_purchase_restricted = restricted_users.some(row =>
+                row.user === current_users && row.dont_see_purchase_details === 1
+            );
 
-                    e.preventDefault();   // prevent default browser behavior
+            // If restricted → don't show button or shortcut
+            if (!is_purchase_restricted) {
 
-                    if (value && cur_frm && cur_frm.doctype === "Sales Invoice") {
+                // Main switch
+                if (settings.purchase_search_window) {
+
+                    // Show button
+                    cur_frm.add_custom_button(__('Purchase Details'), () => {
                         show_last_purchase_dialog(cur_frm);
-                    }
+                    });
+
+                    // Remove previous event to avoid duplicates
+                    $(document).off('keydown.item_qty_purchase');
+
+                    // Shortcut SHIFT + P
+                    $(document).on('keydown.item_qty_purchase', function (e) {
+
+                        if (e.shiftKey && e.key.toLowerCase() === "p") {
+                            e.preventDefault();
+
+                            if (cur_frm && cur_frm.doctype === "Sales Invoice") {
+                                show_last_purchase_dialog(cur_frm);
+                            }
+                        }
+                    });
                 }
-            });
-
-        });
-
-
-
-
-
-
-        frappe.db.get_single_value('Kenza Settings', 'item_qty_search_window').then(value => {
-
-            // Only show button if enabled
-            if (value) {
-                cur_frm.add_custom_button(__('Item Qty'), () => {
-                    show_item_qty_dialog(cur_frm);
-                });
             }
 
-            // Keyboard shortcut
-            $(document).off('keydown.item_qty_window'); // prevent duplicate events
-            $(document).on('keydown.item_qty_window', function (e) {
+        });
 
-                // Shift + I
-                if (e.shiftKey && e.key.toLowerCase() === "i") {
 
-                    e.preventDefault();   // prevent default browser behavior
+        // frappe.db.get_single_value('Kenza Settings', 'purchase_search_window').then(value => {
 
-                    if (value && cur_frm && cur_frm.doctype === "Sales Invoice") {
+        //     // Only show button if enabled
+        //     if (value) {
+        //         cur_frm.add_custom_button(__('Purchase Details'), () => {
+        //             show_last_purchase_dialog(cur_frm);
+        //         });
+        //     }
+
+        //     // Keyboard shortcut
+        //     $(document).off('keydown.item_qty_purchase'); // prevent duplicates
+        //     $(document).on('keydown.item_qty_purchase', function (e) {
+
+        //         // Shift + P
+        //         if (e.shiftKey && e.key.toLowerCase() === "p") {
+
+        //             e.preventDefault();   // prevent default browser behavior
+
+        //             if (value && cur_frm && cur_frm.doctype === "Sales Invoice") {
+        //                 show_last_purchase_dialog(cur_frm);
+        //             }
+        //         }
+        //     });
+
+        // });
+
+
+
+        const current_usere = frappe.session.user;
+
+        // Get full Kenza Settings (Single DocType)
+        frappe.call({
+            method: "frappe.client.get",
+            args: {
+                doctype: "Kenza Settings",
+                name: "Kenza Settings"
+            }
+        }).then(r => {
+
+            const settings = r.message || {};
+            const restricted_users = settings.restricted_users || [];
+
+            // Check if current user is restricted for ITEM QTY
+            const is_item_qty_restricted = restricted_users.some(row =>
+                row.user === current_usere && row.dont_see_item_qty === 1
+            );
+
+            // If NOT restricted -> allow feature
+            if (!is_item_qty_restricted) {
+
+                if (settings.item_qty_search_window) {
+
+                    // Show button
+                    cur_frm.add_custom_button(__('Item Qty'), () => {
                         show_item_qty_dialog(cur_frm);
-                    }
+                    });
+
+                    // Remove previous event to avoid duplicates
+                    $(document).off('keydown.item_qty_window');
+
+                    // Shortcut SHIFT + I
+                    $(document).on('keydown.item_qty_window', function (e) {
+
+                        if (e.shiftKey && e.key.toLowerCase() === "i") {
+                            e.preventDefault();
+
+                            if (cur_frm && cur_frm.doctype === "Sales Invoice") {
+                                show_item_qty_dialog(cur_frm);
+                            }
+                        }
+                    });
                 }
-            });
+            }
 
         });
+
+
+
+
+
+
+        // frappe.db.get_single_value('Kenza Settings', 'item_qty_search_window').then(value => {
+
+        //     // Only show button if enabled
+        //     if (value) {
+        //         cur_frm.add_custom_button(__('Item Qty'), () => {
+        //             show_item_qty_dialog(cur_frm);
+        //         });
+        //     }
+
+        //     // Keyboard shortcut
+        //     $(document).off('keydown.item_qty_window'); // prevent duplicate events
+        //     $(document).on('keydown.item_qty_window', function (e) {
+
+        //         // Shift + I
+        //         if (e.shiftKey && e.key.toLowerCase() === "i") {
+
+        //             e.preventDefault();   // prevent default browser behavior
+
+        //             if (value && cur_frm && cur_frm.doctype === "Sales Invoice") {
+        //                 show_item_qty_dialog(cur_frm);
+        //             }
+        //         }
+        //     });
+
+        // });
         
 
 
@@ -217,6 +416,13 @@ function set_default_warehouse(frm) {
         frm.refresh_field('set_warehouse');
     }
 }
+
+                          //////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////// ITEM TABLE /////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////
+                        ///////////////////////////////
+
 
 frappe.ui.form.on("Sales Invoice Item", {
     item_code: function (frm, cdt, cdn) {
@@ -317,25 +523,59 @@ frappe.ui.form.on("Sales Invoice Item", {
         });
 
         load_item_transaction_details(row.item_code,frm)
+        validate_item_rate(frm, cdt, cdn);
+        validate_last_invoice_rate(frm, cdt, cdn);
 
-
-
-
-        // Build and display stock details
         build_stock_table(frm, row).then(html => {
-            frm.doc.custom_stock_details = html;
-            frm.refresh_field("custom_stock_details");
+            frm.set_df_property("custom_stock_details", "options", html);
         });
-    }
+
+    },
+
+    rate: function(frm, cdt, cdn) {
+        validate_item_rate(frm, cdt, cdn);
+        validate_last_invoice_rate(frm, cdt, cdn);
+    },
 });
 
 
 
-// ITEM stock above table//////////////
 
+
+// Stock Details  Table above table//////////////
 
 async function build_stock_table(frm, row) {
+
     let html = "";
+
+    // ✅ Get current user
+    let current_user = frappe.session.user;
+
+    // ✅ Get Kenza Settings
+    let settings_res = await frappe.call({
+        method: "frappe.client.get",
+        args: {
+            doctype: "Kenza Settings"
+        }
+    });
+
+    let restricted_users = settings_res.message.restricted_users || [];
+
+    // ✅ Match current user with restriction table
+    let user_settings = restricted_users.find(r => r.user === current_user) || {};
+
+    // ✅ If user should NOT see stock table at all
+    if (user_settings.dont_see_stock_details_table) {
+        return `<p style="color:#999; padding:8px;"> Stock details are Restricted for your.  </p>`;
+    }
+
+    // Define column visibility
+    let show_available_qty = !user_settings.dont_see_available_qty;
+    let show_buying_price = !user_settings.dont_see_buying_price;
+    let show_selling_price = !user_settings.dont_see_selling_price;
+
+
+    // -----------------------------------
 
     let uoms_res = await frappe.call({
         method: "kenz_trading.events.sales_invoice.get_uoms",
@@ -357,24 +597,62 @@ async function build_stock_table(frm, row) {
 
     if (uoms.length > 0 || stock.length > 0) {
 
+        // ✅ Table styling
         html += `
-        <h4>Stock Details</h4>
-        <table class="table table-bordered" style="width:100%">
+        <style>
+            .custom-stock-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+                font-size: 13px;
+            }
+
+            .custom-stock-table th {
+                background-color: #1f4e79;
+                color: #ffffff;
+                padding: 10px;
+                height: 45px;
+                text-align: center;
+            }
+
+            .custom-stock-table td {
+                padding: 8px;
+                height: 38px;
+                text-align: center;
+            }
+
+            .custom-stock-table tr:nth-child(even) {
+                background-color: #f7f9fc;
+            }
+
+            .custom-stock-table tr:hover {
+                background-color: #eaf1ff;
+            }
+        </style>
+
+      
+
+        <table class="table table-bordered custom-stock-table">
             <thead>
                 <tr>
                     <th>UOM</th>
                     <th>Conversion Factor</th>
-                    <th>Selling Price (${frm.doc.selling_price_list || "Standard Selling"})</th>
-                    <th>Buying Price (${frm.doc.buying_price_list || "Standard Buying"})</th>
+
+                    ${show_selling_price ? `<th>Selling Price</th>` : ""}
+                    ${show_buying_price ? `<th>Buying Price</th>` : ""}
+
                     <th>Warehouse</th>
-                    <th>Available Qty</th>
+
+                    ${show_available_qty ? `<th>Available Qty</th>` : ""}
                 </tr>
             </thead>
-            <tbody>`;
+            <tbody>
+        `;
 
         let maxRows = Math.max(uoms.length, stock.length);
 
         for (let i = 0; i < maxRows; i++) {
+
             let uom = uoms[i] || {};
             let stockItem = stock[i] || {};
 
@@ -383,62 +661,69 @@ async function build_stock_table(frm, row) {
 
             if (uom.uom) {
 
-                // ------------------ Selling Price ------------------
-                let selling_price_res = await frappe.call({
-                    method: "frappe.client.get_value",
-                    args: {
-                        doctype: "Item Price",
-                        filters: {
-                            item_code: row.item_code,
-                            uom: uom.uom,
-                            price_list: frm.doc.selling_price_list || "Standard Selling"
-                        },
-                        fieldname: "price_list_rate"
-                    }
-                });
+                if (show_selling_price) {
+                    let selling_price_res = await frappe.call({
+                        method: "frappe.client.get_value",
+                        args: {
+                            doctype: "Item Price",
+                            filters: {
+                                item_code: row.item_code,
+                                uom: uom.uom,
+                                price_list: frm.doc.selling_price_list || "Standard Selling"
+                            },
+                            fieldname: "price_list_rate"
+                        }
+                    });
 
-                selling_rate = (selling_price_res.message && selling_price_res.message.price_list_rate)
-                    ? selling_price_res.message.price_list_rate
-                    : "-";
+                    if (selling_price_res.message)
+                        selling_rate = selling_price_res.message.price_list_rate || "-";
+                }
 
-                // ------------------ Buying Price ------------------
-                let buying_price_res = await frappe.call({
-                    method: "frappe.client.get_value",
-                    args: {
-                        doctype: "Item Price",
-                        filters: {
-                            item_code: row.item_code,
-                            uom: uom.uom,
-                            price_list: frm.doc.buying_price_list || "Standard Buying"
-                        },
-                        fieldname: "price_list_rate"
-                    }
-                });
+                if (show_buying_price) {
+                    let buying_price_res = await frappe.call({
+                        method: "frappe.client.get_value",
+                        args: {
+                            doctype: "Item Price",
+                            filters: {
+                                item_code: row.item_code,
+                                uom: uom.uom,
+                                price_list: frm.doc.buying_price_list || "Standard Buying"
+                            },
+                            fieldname: "price_list_rate"
+                        }
+                    });
 
-                buying_rate = (buying_price_res.message && buying_price_res.message.price_list_rate)
-                    ? buying_price_res.message.price_list_rate
-                    : "-";
+                    if (buying_price_res.message)
+                        buying_rate = buying_price_res.message.price_list_rate || "-";
+                }
             }
 
             html += `
             <tr>
                 <td>${uom.uom || "-"}</td>
                 <td>${uom.conversion_factor || "-"}</td>
-                <td>${selling_rate}</td>
-                <td>${buying_rate}</td>
+
+                ${show_selling_price ? `<td>${selling_rate}</td>` : ""}
+                ${show_buying_price ? `<td>${buying_rate}</td>` : ""}
+
                 <td>${stockItem.warehouse || "-"}</td>
-                <td>${stockItem.actual_qty !== undefined ? stockItem.actual_qty : "-"}</td>
+
+                ${show_available_qty ? 
+                    `<td style="font-weight:bold; color:${stockItem.actual_qty > 0 ? 'green' : 'red'}">
+                        ${stockItem.actual_qty ?? "-"}
+                    </td>` 
+                : ""}
             </tr>`;
         }
 
         html += `</tbody></table>`;
     }
+    else {
+        html = `<p style="color:#888;">No stock / UOM details found for this item</p>`;
+    }
 
     return html;
 }
-
-
-
 
 // SALES CODE/////
 
@@ -934,5 +1219,130 @@ function load_item_transaction_details(item_code, frm) {
 
         html += '</tbody></table>';
         return html;
+    }
+}
+
+// -----------------------------
+// VALIDATE ITEM RATE  MIN and MAX
+// -----------------------------
+
+async function is_rate_validation_enabled() {
+    let value = await frappe.db.get_single_value(
+        "Kenza Settings",
+        "minimum_and_maximum_rate_validation"
+    );
+    return value ? true : false;
+}
+
+// -----------------------------
+// FETCH ITEM LIMITS
+// -----------------------------
+
+async function get_item_limits(item_code) {
+    if (!item_code) return null;
+
+    const r = await frappe.db.get_value("Item", item_code, [
+        "custom_minimum_sale_price",
+        "custom_maximum_sale_price"
+    ]);
+
+    if (!r || !r.message) return null;
+
+    return {
+        min: r.message.custom_minimum_sale_price || 0,
+        max: r.message.custom_maximum_sale_price || 0
+    };
+}
+
+
+
+async function validate_item_rate(frm, cdt, cdn) {
+    const enabled = await is_rate_validation_enabled();
+    if (!enabled) return;  // DO NOTHING if disabled
+
+    let row = locals[cdt][cdn];
+    if (!row.item_code || !row.rate) return;
+
+    const limits = await get_item_limits(row.item_code);
+    if (!limits) return;
+
+    if (limits.min && flt(row.rate) < flt(limits.min)) {
+        frappe.msgprint({
+            title: __('Invalid Rate'),
+            message: __(`Rate for <b>${row.item_code}</b> cannot be less than <b>${limits.min}</b>`),
+            indicator: 'red'
+        });
+
+        row.rate = limits.min;
+        frm.refresh_field("items");
+    }
+
+    if (limits.max && flt(row.rate) > flt(limits.max)) {
+        frappe.msgprint({
+            title: __('Invalid Rate'),
+            message: __(`Rate for <b>${row.item_code}</b> cannot exceed <b>${limits.max}</b>`),
+            indicator: 'red'
+        });
+
+        row.rate = limits.max;
+        frm.refresh_field("items");
+    }
+}
+
+
+
+
+
+
+// -----------------------------
+// CHECK SETTING FIRST
+// -----------------------------
+
+async function is_last_invoice_rate_enabled() {
+    let value = await frappe.db.get_single_value(
+        "Kenza Settings",
+        "last_invoice_item_rate_validation"
+    );
+    return value ? true : false;
+}
+
+// -----------------------------
+// FETCH LAST SALES RATE
+// -----------------------------
+
+async function get_last_sales_rate(item_code) {
+    if (!item_code) return null;
+
+    const r = await frappe.call({
+        method: "kenz_trading.events.sales_invoice.get_last_sales_invoice_rate",
+        args: { item_code: item_code }
+    });
+
+    return r.message || null;
+}
+
+// -----------------------------
+// VALIDATE LAST SALES RATE
+// -----------------------------
+
+async function validate_last_invoice_rate(frm, cdt, cdn) {
+    const enabled = await is_last_invoice_rate_enabled();
+    if (!enabled) return;  // skip if setting is disabled
+
+    let row = locals[cdt][cdn];
+    if (!row.item_code || !row.rate) return;
+
+    const last_rate = await get_last_sales_rate(row.item_code);
+    if (!last_rate) return; // no previous sales, skip
+
+    if (flt(row.rate) < flt(last_rate)) {
+        frappe.msgprint({
+            title: __('Invalid Rate'),
+            message: __(`Rate for <b>${row.item_code}</b> cannot be less than the last sales invoice rate <b>${last_rate}</b>`),
+            indicator: 'red'
+        });
+
+        row.rate = last_rate;
+        frm.refresh_field("items");
     }
 }

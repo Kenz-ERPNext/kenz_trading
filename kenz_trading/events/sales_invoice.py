@@ -1,5 +1,6 @@
 import frappe
 from frappe.utils import getdate, nowtime
+from frappe import _
 
 @frappe.whitelist()
 def get_default_branch(user):
@@ -306,3 +307,25 @@ def get_last_purchase_and_sales(item_code, supplier=None, customer=None):
         'purchases': purchases,
         'sales': sales
     }
+
+
+
+
+@frappe.whitelist()
+def get_last_sales_invoice_rate(item_code):
+    if not item_code:
+        return None
+
+    last_rate = frappe.db.sql("""
+        SELECT sii.rate
+        FROM `tabSales Invoice Item` sii
+        JOIN `tabSales Invoice` si ON si.name = sii.parent
+        WHERE sii.item_code=%s
+          AND si.docstatus=1
+        ORDER BY si.posting_date DESC, si.creation DESC
+        LIMIT 1
+    """, item_code, as_dict=True)
+
+    if last_rate:
+        return last_rate[0].rate
+    return None

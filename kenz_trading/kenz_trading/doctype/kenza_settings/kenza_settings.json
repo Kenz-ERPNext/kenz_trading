@@ -13,11 +13,16 @@
   "sales_invoice_section",
   "activate_item_variant_save",
   "show_item_variant_table",
+  "show_stock_details_table",
+  "minimum_and_maximum_rate_validation",
+  "last_invoice_item_rate_validation",
   "column_break_ixxn",
   "show_last_5_sales_and_purchase_transaction",
   "sale_search_window",
   "purchase_search_window",
-  "item_qty_search_window"
+  "item_qty_search_window",
+  "section_break_bkws",
+  "restricted_users"
  ],
  "fields": [
   {
@@ -79,26 +84,54 @@
    "default": "0",
    "fieldname": "sale_search_window",
    "fieldtype": "Check",
-   "label": "Sale Search Window"
+   "label": "Show Sale Search Window"
   },
   {
    "default": "0",
    "fieldname": "purchase_search_window",
    "fieldtype": "Check",
-   "label": "Purchase Search Window"
+   "label": "Show Purchase Search Window"
   },
   {
    "default": "0",
    "fieldname": "item_qty_search_window",
    "fieldtype": "Check",
-   "label": "Item Qty search Window"
+   "label": "Show Item Qty search Window"
+  },
+  {
+   "fieldname": "restricted_users",
+   "fieldtype": "Table",
+   "label": "Restricted Users",
+   "options": "Restricted Users"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_stock_details_table",
+   "fieldtype": "Check",
+   "label": "Show Stock Details Table"
+  },
+  {
+   "fieldname": "section_break_bkws",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "minimum_and_maximum_rate_validation",
+   "fieldtype": "Check",
+   "label": "Minimum and Maximum Rate Validation"
+  },
+  {
+   "default": "0",
+   "fieldname": "last_invoice_item_rate_validation",
+   "fieldtype": "Check",
+   "label": "Last Invoice Item Rate Validation"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-11-27 10:57:44.705109",
+ "modified": "2025-11-28 12:33:54.485458",
  "modified_by": "Administrator",
  "module": "Kenz Trading",
  "name": "Kenza Settings",
