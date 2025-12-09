@@ -6,6 +6,7 @@ from frappe.model.document import Document
 
 
 class KenzaSettings(Document):
+	pass
 
 	# def delete_task_recursively(task_name):
     # """Delete a task and all its child tasks"""
