@@ -327,7 +327,9 @@ fixtures = [
                 "Sales Invoice-custom_stock_details",
                 "Sales Invoice-custom_section_break_kzlxf",
                 "Item-custom_minimum_sale_price",
-                "Item-custom_maximum_sale_price"
+                "Item-custom_maximum_sale_price",
+                "Sales Order-custom_attention",
+                "Sales Order-custom_subject"
 
 
 
