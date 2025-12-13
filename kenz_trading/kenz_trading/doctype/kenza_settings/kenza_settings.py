@@ -6,36 +6,80 @@ from frappe.model.document import Document
 
 
 class KenzaSettings(Document):
-	pass
-
-	# def delete_task_recursively(task_name):
-    # """Delete a task and all its child tasks"""
-    # # Find child tasks
-    # child_tasks = frappe.get_all("Task", filters={"parent_task": task_name}, pluck="name")
-    # for child in child_tasks:
-    #     delete_task_recursively(child)  # Recursively delete child tasks
-
-    # # Delete this task
-    # try:
-    #     frappe.delete_doc("Task", task_name, force=1, ignore_permissions=True)
-    # except Exception as e:
-    #     frappe.log_error(f"Error deleting Task {task_name}: {e}")
+	# pass 
 
 
-	# @frappe.whitelist()
-	# def delete_all_projects_and_tasks():
-	# 	# Delete all Tasks (including nested)
-	# 	tasks = frappe.get_all("Task", filters={"parent_task": ["is", "set"]}, pluck="name")  # top-level tasks
-	# 	for t in tasks:
-	# 		delete_task_recursively(t)
+	@frappe.whitelist()
+	def create_tc(self):
+		"""Create Tax Category"""
+		# Check if already exists
+		existing = frappe.db.exists("Tax Category", {"title": "VAT 15%"})
+		if existing:
+			self.tax_category = existing
+			self.save()
+			return existing
 
-	# 	# Delete Projects
-	# 	projects = frappe.get_all("Project", pluck="name")
-	# 	for p in projects:
-	# 		try:
-	# 			frappe.delete_doc("Project", p, force=1, ignore_permissions=True)
-	# 		except Exception as e:
-	# 			frappe.log_error(f"Error deleting Project {p}: {e}")
+		tc = frappe.new_doc("Tax Category")
+		tc.title = "VAT 15%"
+		tc.custom_zatca_category = "Standard rate"
+		tc.insert()
+		frappe.db.commit()
 
-	# 	frappe.db.commit()
-	# 	return "Deleted all Tasks (including child tasks) and all Projects"
+		self.tax_category = tc.name
+		self.save()
+		return tc.name
+
+	@frappe.whitelist()
+	def create_ah(self):
+		"""Create Account Head"""
+		# Check if already exists
+		existing = frappe.db.exists("Account", {"account_name": "VAT 15%"})
+		if existing:
+			self.account = existing
+			self.save()
+			return existing
+
+		ah = frappe.new_doc("Account")
+		ah.account_name = "VAT 15%"
+		ah.parent_account = self.parent_account
+		ah.account_type = "Tax"
+		ah.tax_rate = 15.0
+		ah.insert()
+		frappe.db.commit()
+
+		self.account = ah.name
+		self.save()
+		return ah.name
+
+	@frappe.whitelist()
+	def create_tt(self):
+		"""Create Sales Taxes and Charges Template"""
+		# Check if already exists
+		existing = frappe.db.exists("Sales Taxes and Charges Template", {"title": "VAT 15%"})
+		if existing:
+			self.sales_taxes_and_charges_template = existing
+			self.save()
+			return existing
+
+		tt = frappe.new_doc("Sales Taxes and Charges Template")
+		tt.title = "VAT 15%"
+		tt.tax_category = self.tax_category
+
+		# Append tax details
+		tt.append("taxes", {
+			"charge_type": "On Net Total",
+			"account_head": self.account,
+			"description": "VAT 15%",
+			"rate": 15.0
+		})
+
+		tt.insert()
+		frappe.db.commit()
+
+		self.sales_taxes_and_charges_template = tt.name
+		self.save()
+		return tt.name
+
+
+
+

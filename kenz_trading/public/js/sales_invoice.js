@@ -2,7 +2,7 @@ let item_uoms = {};
 
 frappe.ui.form.on("Sales Invoice", {
 
-
+ 
     before_save: async function(frm) {
         // ----------------------------
         // Minimum / Maximum Rate Validation
@@ -94,6 +94,41 @@ frappe.ui.form.on("Sales Invoice", {
 
 
     refresh(frm) {
+
+
+        frm.fields_dict['items'].grid.get_field('item_code').get_query = function(doc, cdt, cdn) {
+            if (frm.doc.branch) {
+                // Filter by branch if branch is selected
+                return {
+                    filters: {
+                        'custom_branch': frm.doc.branch
+                    }
+                };
+            } else {
+                // No filter if branch is empty
+                return {};
+            }
+        };
+
+        if (!frm.doc.__islocal) return; // only for new documents
+
+        // Get the checkbox value from Kenza Settings
+        frappe.db.get_single_value('Kenza Settings', 'enable_default_sales_tax_template')
+            .then((enabled) => {
+                if (enabled) {
+                    // Get the default Sales Taxes and Charges Template
+                    frappe.db.get_single_value('Kenza Settings', 'sales_taxes_and_charges_template')
+                        .then((template) => {
+                            if (template) {
+                                frm.set_value('taxes_and_charges', template);
+                                frm.refresh_field('taxes_and_charges');
+                            }
+                        });
+                }
+            });
+
+
+
 
         const current_user = frappe.session.user;
 

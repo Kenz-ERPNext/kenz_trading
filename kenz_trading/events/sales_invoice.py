@@ -2,55 +2,120 @@ import frappe
 from frappe.utils import getdate, nowtime
 from frappe import _
 
+
 @frappe.whitelist()
 def get_default_branch(user):
     branch = frappe.db.get_value("User Permission", {"user":user,"allow":"Branch"}, "for_value")
     return branch if branch else None
 
-
+ 
 @frappe.whitelist()
 def get_uoms(item_code):
     uoms = frappe.get_all("UOM Conversion Detail", filters={"parent": item_code}, fields=["uom", "conversion_factor"])
     return uoms
 
 
+
+
 @frappe.whitelist()
 def on_submits(doc, method):
+    # ✅ Item Variants section
+    if frappe.db.get_single_value("Kenza Settings", "activate_item_variant_save"):
+        for row in doc.items:
+            if not row.custom_remark or not row.item_code:
+                continue
 
-    # ✅ Check Kenza Settings first
-    if not frappe.db.get_single_value("Kenza Settings", "activate_item_variant_save"):
+            # Avoid duplicate variant for same invoice + remark
+            variant = frappe.db.get_value(
+                "Item Variants",
+                {"variant_name": row.custom_remark, "main_item": row.item_code},
+                "name"
+            )
+
+            if not variant:
+                iv = frappe.new_doc("Item Variants")
+                iv.variant_name = row.custom_remark
+                iv.main_item = row.item_code
+                iv.customer = doc.customer
+            else:
+                iv = frappe.get_doc("Item Variants", variant)
+
+            # ✅ Add row to Variant List child table
+            iv.append("variant_list", {
+                "invoice_no": doc.name,
+                "rate": row.rate,
+                "date": getdate(doc.posting_date),
+                "time": nowtime()
+            })
+
+            iv.save(ignore_permissions=True)
+
+    # ✅ Payment Entry section (independent)
+    if not frappe.db.get_single_value("Kenza Settings", "auto_create_payment"):
         return
 
-    for row in doc.items:
+    paid_to_account = frappe.db.get_value(
+        "Mode of Payment Account",
+        {
+            "parent": doc.custom_mode_of_payment,   # Mode of Payment
+            "company": doc.company
+        },
+        "default_account"
+    )
 
-        if not row.custom_remark or not row.item_code:
-            continue
-
-        # Avoid duplicate variant for same invoice + remark
-        variant = frappe.db.get_value(
-            "Item Variants",
-            {"variant_name": row.custom_remark, "main_item": row.item_code},
-            "name"
+    if not paid_to_account:
+        frappe.throw(
+            f"Default Account not set for Mode of Payment <b>{doc.custom_mode_of_payment}</b>"
         )
 
-        if not variant:
-            iv = frappe.new_doc("Item Variants")
-            iv.variant_name = row.custom_remark
-            iv.main_item = row.item_code
-            iv.customer = doc.customer
-        else:
-            iv = frappe.get_doc("Item Variants", variant)
+    paid_from_account = frappe.db.get_value(
+        "Company",
+        doc.company,
+        "default_receivable_account"
+    )
 
-        # ✅ Add row to Variant List child table
-        iv.append("variant_list", {
-            "invoice_no": doc.name,
-            "rate": row.rate,
-            "date": getdate(doc.posting_date),
-            "time": nowtime()
-        })
+    if not paid_from_account:
+        frappe.throw(
+            f"Default Receivable Account not set for Company <b>{doc.company}</b>"
+        )
 
-        iv.save(ignore_permissions=True)
+    pe = frappe.new_doc("Payment Entry")
+    pe.payment_type = "Receive"
+    pe.posting_date = doc.posting_date
+    pe.mode_of_payment = doc.custom_mode_of_payment
+    pe.party_type = "Customer"
+    pe.party = doc.customer
+    pe.paid_to = paid_to_account
+    pe.paid_to_account_currency = doc.currency
+    pe.paid_from = paid_from_account
+    pe.paid_from_account_currency = doc.currency
+    pe.paid_amount = doc.outstanding_amount
+    pe.received_amount = doc.outstanding_amount
+    pe.source_exchange_rate = 1
+    pe.target_exchange_rate = 1
+    
+    if doc.custom_mode_of_payment == "Cheque":
+        pe.reference_no = doc.custom_cheque_number
+        pe.reference_date = doc.custom_cheque_date
+    else:
+        pe.reference_no = doc.name
+        pe.reference_date = doc.posting_date
 
+    pe.append("references", {
+        "reference_doctype": "Sales Invoice",
+        "reference_name": doc.name,
+        "total_amount": doc.grand_total,
+        "outstanding_amount": doc.outstanding_amount,
+        "allocated_amount": doc.outstanding_amount
+    })
+
+    pe.insert(ignore_permissions=True)
+    pe.submit()
+
+    frappe.msgprint(f"Payment Entry <b>{pe.name}</b> created successfully", indicator="green")
+
+
+   
 
 
 

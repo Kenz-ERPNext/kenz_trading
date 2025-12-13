@@ -2,37 +2,54 @@
 // For license information, please see license.txt
 
  
-// frappe.ui.form.on("Kenza Settings", {
-//     refresh: function(frm) {
-//         frm.add_custom_button("Delete All Projects & Tasks", function () {
 
-//             frappe.confirm(
-//                 "Are you sure you want to delete ALL Projects and ALL Tasks?<br><br><b>This action cannot be undone.</b>",
-                
-//                 function () {
-//                     // YES
-//                     cur_frm.call({
-// 			            doc: cur_frm.doc,
-//                         method: "delete_all_projects_and_tasks",
-//                         callback: function (r) {
-//                             if (r.message) {
-//                                 frappe.msgprint(r.message);
-//                             }
-//                         }
-//                     });
-//                 },
+frappe.ui.form.on("Kenza Settings", {
+	refresh(frm) {
 
-//                 function () {
-//                     // NO → nothing
-//                 }
-//             );
+	},
 
-//         }).addClass("btn-danger");
-//     }
-// });
+    create_tax_category: function(frm) {
 
-// frappe.ui.form.on("Kenza Settings", {
-// 	refresh(frm) {
+        cur_frm.call({
+                    doc: cur_frm.doc,
+                    method: "create_tc",
+                    args: {},
+                    callback: function (r) {
+                        if (r.message) {
+                            frappe.msgprint("Tax Category Created: <b>" + r.message + "</b>");
+                        }
+                    }
+                });
+           
+    },
 
-// 	},
-// });
+    create_tax_template: function(frm) {
+
+        cur_frm.call({
+                    doc: cur_frm.doc,
+                    method: "create_tt",
+                    args: {},
+                    callback: function (r) {
+                        if (r.message) {
+                            frappe.msgprint("Tax Template Created: <b>" + r.message + "</b>");
+                        }
+                    }
+                });
+           
+    },
+
+    create_template__account_head: function(frm) {
+
+        cur_frm.call({
+                    doc: cur_frm.doc,
+                    method: "create_ah",
+                    args: {},
+                    callback: function (r) {
+                        if (r.message) {
+                            frappe.msgprint("Account Head Created: <b>" + r.message + "</b>");
+                        }
+                    }
+                });
+           
+    },
+}); 

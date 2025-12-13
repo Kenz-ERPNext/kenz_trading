@@ -329,7 +329,12 @@ fixtures = [
                 "Item-custom_minimum_sale_price",
                 "Item-custom_maximum_sale_price",
                 "Sales Order-custom_attention",
-                "Sales Order-custom_subject"
+                "Sales Order-custom_subject",
+                "Item-custom_branch",
+                "Sales Invoice-custom_mode_of_payment",
+                "Sales Invoice-custom_cheque_number",
+                "Sales Invoice-custom_cheque_date"
+
 
 
 
