@@ -333,7 +333,11 @@ fixtures = [
                 "Item-custom_branch",
                 "Sales Invoice-custom_mode_of_payment",
                 "Sales Invoice-custom_cheque_number",
-                "Sales Invoice-custom_cheque_date"
+                "Sales Invoice-custom_cheque_date",
+                "Customer-custom_branch",
+                "Supplier-custom_branch",
+                "Sales Order-custom_branch",
+                "Purchase Order-custom_branchsss"
 
 
 
