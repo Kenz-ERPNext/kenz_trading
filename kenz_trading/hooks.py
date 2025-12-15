@@ -337,7 +337,8 @@ fixtures = [
                 "Customer-custom_branch",
                 "Supplier-custom_branch",
                 "Sales Order-custom_branch",
-                "Purchase Order-custom_branchsss"
+                "Purchase Order-custom_branch",
+                "Mode of Payment-custom_branch"
 
 
 
