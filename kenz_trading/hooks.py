@@ -122,12 +122,17 @@ doctype_js = {
 # Permissions evaluated in scripted ways
 
 permission_query_conditions = {
-	"Item": "kenz_trading.events.item.get_permission_query_conditions_for_item",
+	# "Item": "kenz_trading.events.item.get_permission_query_conditions_for_item",
+
+    "Item": "kenz_trading.events.item.get_permission_query_conditions"
+
+    
 }
-#
-# has_permission = {
-# 	"Item": "kenz_trading.events.item.has_permission_for_item",
-# }
+
+
+has_permission = {
+    "Item": "kenz_trading.events.item.item_has_permission"
+}
 
 # DocType Class
 # ---------------
@@ -154,18 +159,12 @@ doc_events = {
     },
 
     "Sales Invoice":{
-        "on_submit":"kenz_trading.events.sales_invoice.on_submits"
+        "on_submit":"kenz_trading.events.sales_invoice.on_submits",
+        "validate": "kenz_trading.events.sales_invoice.validate_item_branch",
+        "has_permission": "kenz_trading.events.item.item_has_permission"
+        
     },
 
-
-
-
-    # "Item": {
-    #     "before_validate": "kenz_trading.events.item.get_next_item_code"
-    # }
-#     "Purchase Invoice":{
-#         "before_insert":"kenz_trading.events.purchase_invoice.set_warehouse_as_default"
-#     }
 }
 
 # Scheduled Tasks
@@ -330,7 +329,7 @@ fixtures = [
                 "Item-custom_maximum_sale_price",
                 "Sales Order-custom_attention",
                 "Sales Order-custom_subject",
-                "Item-custom_branch",
+                # "Item-custom_branch",
                 "Sales Invoice-custom_mode_of_payment",
                 "Sales Invoice-custom_cheque_number",
                 "Sales Invoice-custom_cheque_date",
@@ -338,7 +337,9 @@ fixtures = [
                 "Supplier-custom_branch",
                 "Sales Order-custom_branch",
                 "Purchase Order-custom_branch",
-                "Mode of Payment-custom_branch"
+                "Mode of Payment-custom_branch",
+                "Item-custom_branch_list",
+                
 
 
 
@@ -359,6 +360,7 @@ fixtures = [
 
                     "Purchase Invoice-sec_warehouse-collapsible",
                     "Purchase Invoice-main-field_order",
+                    "Item-custom_branch_list-ignore_user_permissions"
 
                 ]]
 

@@ -86,6 +86,8 @@ frappe.ui.form.on("Sales Invoice", {
         frm.set_df_property('project', 'hidden', 0);
         // Set default warehouse on form load if update_stock is enabled
         set_default_warehouse(frm);
+
+        set_item_query(frm);
     },
     update_stock: function(frm) {
         // Set or clear warehouse when update_stock is toggled
@@ -460,6 +462,7 @@ function set_default_warehouse(frm) {
 
 
 frappe.ui.form.on("Sales Invoice Item", {
+
     item_code: function (frm, cdt, cdn) {
         let row = locals[cdt][cdn];
         if (!row.item_code) return;
@@ -565,6 +568,8 @@ frappe.ui.form.on("Sales Invoice Item", {
             frm.set_df_property("custom_stock_details", "options", html);
         });
 
+        set_item_query(frm);
+
     },
 
     rate: function(frm, cdt, cdn) {
@@ -572,6 +577,18 @@ frappe.ui.form.on("Sales Invoice Item", {
         validate_last_invoice_rate(frm, cdt, cdn);
     },
 });
+
+
+function set_item_query(frm) {
+    frm.set_query("item_code", "items", function () {
+        return { 
+            query: "kenz_trading.events.sales_invoice.get_items_by_branch",
+            filters: {
+                branch: frappe.defaults.get_user_default("Branch")
+            }
+        };
+    });
+}
 
 
 

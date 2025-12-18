@@ -93,7 +93,7 @@ def on_submits(doc, method):
     pe.received_amount = doc.outstanding_amount
     pe.source_exchange_rate = 1
     pe.target_exchange_rate = 1
-    
+
     if doc.custom_mode_of_payment == "Cheque":
         pe.reference_no = doc.custom_cheque_number
         pe.reference_date = doc.custom_cheque_date
@@ -394,3 +394,61 @@ def get_last_sales_invoice_rate(item_code):
     if last_rate:
         return last_rate[0].rate
     return None
+
+
+
+@frappe.whitelist()
+def get_items_by_branch(doctype, txt, searchfield, start, page_len, filters):
+    branch = filters.get("branch")
+
+    if not branch:
+        return []
+
+    return frappe.db.sql("""
+        SELECT
+            i.name,
+            i.item_name
+        FROM `tabItem` i
+        INNER JOIN `tabBranches` ib
+            ON ib.parent = i.name
+        WHERE
+            ib.branch = %(branch)s
+            AND i.disabled = 0
+            AND (
+                i.name LIKE %(txt)s
+                OR i.item_name LIKE %(txt)s
+            )
+        ORDER BY i.name
+        LIMIT %(page_len)s OFFSET %(start)s
+    """, {
+        "branch": branch,
+        "txt": f"%{txt}%",
+        "page_len": page_len,
+        "start": start
+    })
+
+
+
+
+
+@frappe.whitelist()
+def validate_item_branch(doc, method):
+    user_branch = frappe.defaults.get_user_default("Branch")
+
+    for row in doc.items:
+        branch_rows = frappe.db.get_all(
+            "Branches",
+            filters={"parent": row.item_code},
+            pluck="branch"
+        )
+
+        # OPEN item → allowed
+        if not branch_rows:
+            continue
+
+        if user_branch not in branch_rows:
+            frappe.throw(
+                f"Item {row.item_code} not allowed for Branch {user_branch}"
+            )
+
+
