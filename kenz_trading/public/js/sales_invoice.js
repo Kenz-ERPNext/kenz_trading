@@ -98,21 +98,21 @@ frappe.ui.form.on("Sales Invoice", {
     refresh(frm) {
 
 
-        frm.fields_dict['items'].grid.get_field('item_code').get_query = function(doc, cdt, cdn) {
-            if (frm.doc.branch) {
-                // Filter by branch if branch is selected
-                return {
-                    filters: {
-                        'custom_branch': frm.doc.branch
-                    }
-                };
-            } else {
-                // No filter if branch is empty
-                return {};
-            }
-        };
+        // frm.fields_dict['items'].grid.get_field('item_code').get_query = function(doc, cdt, cdn) {
+        //     if (frm.doc.branch) {
+        //         // Filter by branch if branch is selected
+        //         return {
+        //             filters: {
+        //                 'custom_branch': frm.doc.branch
+        //             }
+        //         };
+        //     } else {
+               
+        //         return {};
+        //     }
+        // };
 
-        if (!frm.doc.__islocal) return; // only for new documents
+        if (!frm.doc.__islocal) return; 
 
         // Get the checkbox value from Kenza Settings
         frappe.db.get_single_value('Kenza Settings', 'enable_default_sales_tax_template')
@@ -491,7 +491,7 @@ frappe.ui.form.on("Sales Invoice Item", {
                     frappe.model.set_value(cdt,cdn,"custom_rack_number",
                     r.message.custom_rack_number || ""
                 );
-                
+
                 }
             }
         });
@@ -584,16 +584,36 @@ frappe.ui.form.on("Sales Invoice Item", {
 });
 
 
+// function set_item_query(frm) {
+//     frm.fields_dict["items"].grid.get_field("item_code").get_query = function(doc, cdt, cdn) {
+//         let row = locals[cdt][cdn];
+//         return {
+//             query: "kenz_trading.events.sales_invoice.get_items_by_branch",
+//             filters: {
+//                 branch: frappe.defaults.get_user_default("Branch")
+//             }
+//         };
+//     };
+// }
+
 function set_item_query(frm) {
-    frm.set_query("item_code", "items", function () {
-        return { 
+    frm.fields_dict["items"].grid.get_field("item_code").get_query = function(doc, cdt, cdn) {
+        let row = locals[cdt][cdn];
+
+        // Only apply query if branch exists
+        if (!frm.doc.branch) {
+            return {};  // empty query, shows all items or no filter
+        }
+
+        return {
             query: "kenz_trading.events.sales_invoice.get_items_by_branch",
             filters: {
-                branch: frappe.defaults.get_user_default("Branch")
+                branch: frm.doc.branch  // use frm.doc.branch if exists
             }
         };
-    });
+    };
 }
+
 
 
 
