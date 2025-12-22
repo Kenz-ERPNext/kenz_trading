@@ -339,6 +339,8 @@ fixtures = [
                 "Purchase Order-custom_branch",
                 "Mode of Payment-custom_branch",
                 "Item-custom_branch_list",
+                "Item-custom_rack_number",
+                "Sales Invoice Item-custom_rack_number"
                 
 
 

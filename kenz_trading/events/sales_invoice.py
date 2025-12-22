@@ -54,6 +54,9 @@ def on_submits(doc, method):
     if not frappe.db.get_single_value("Kenza Settings", "auto_create_payment"):
         return
 
+    if not doc.custom_mode_of_payment:
+        return    
+
     paid_to_account = frappe.db.get_value(
         "Mode of Payment Account",
         {
@@ -433,22 +436,23 @@ def get_items_by_branch(doctype, txt, searchfield, start, page_len, filters):
 
 @frappe.whitelist()
 def validate_item_branch(doc, method):
-    user_branch = frappe.defaults.get_user_default("Branch")
+    pass
+#     user_branch = frappe.defaults.get_user_default("Branch")
 
-    for row in doc.items:
-        branch_rows = frappe.db.get_all(
-            "Branches",
-            filters={"parent": row.item_code},
-            pluck="branch"
-        )
+#     for row in doc.items:
+#         branch_rows = frappe.db.get_all(
+#             "Branches",
+#             filters={"parent": row.item_code},
+#             pluck="branch"
+#         )
 
-        # OPEN item → allowed
-        if not branch_rows:
-            continue
+#         # OPEN item → allowed
+#         if not branch_rows:
+#             continue
 
-        if user_branch not in branch_rows:
-            frappe.throw(
-                f"Item {row.item_code} not allowed for Branch {user_branch}"
-            )
+#         if user_branch not in branch_rows:
+#             frappe.throw(
+#                 f"Item {row.item_code} not allowed for Branch {user_branch}"
+#             )
 
 

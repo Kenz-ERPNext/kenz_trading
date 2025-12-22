@@ -487,6 +487,11 @@ frappe.ui.form.on("Sales Invoice Item", {
                     if (row.uom && !allowed_uoms.includes(row.uom)) {
                         frappe.model.set_value(cdt, cdn, "uom", "");
                     }
+
+                    frappe.model.set_value(cdt,cdn,"custom_rack_number",
+                    r.message.custom_rack_number || ""
+                );
+                
                 }
             }
         });
