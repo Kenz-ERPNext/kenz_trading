@@ -47,7 +47,8 @@ doctype_js = {
     "Sales Invoice" : "public/js/sales_invoice.js",
     "Purchase Invoice" : "public/js/purchase_invoice.js",
     "Item" : "public/js/item.js",
-    "Quotation" : "public/js/quotation.js"
+    "Quotation" : "public/js/quotation.js",
+    "Customer" :"public/js/customer.js"
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -363,7 +364,9 @@ fixtures = [
 
                     "Purchase Invoice-sec_warehouse-collapsible",
                     "Purchase Invoice-main-field_order",
-                    "Item-custom_branch_list-ignore_user_permissions"
+                    "Item-custom_branch_list-ignore_user_permissions",
+                    "Customer-custom_cr_no-allow_in_quick_entry",
+                    "Customer-custom_vat_registration_number-allow_in_quick_entry"
 
                 ]]
 
