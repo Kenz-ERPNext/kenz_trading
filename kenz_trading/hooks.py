@@ -368,7 +368,10 @@ fixtures = [
                     "Customer-custom_cr_no-allow_in_quick_entry",
                     "Customer-custom_vat_registration_number-allow_in_quick_entry",
                     "Purchase Invoice-update_stock-default",
-                    "Sales Invoice-update_stock-default"
+                    "Sales Invoice-update_stock-default",
+                    
+                    "Purchase Invoice-main-field_order",
+                    "Sales Invoice-main-field_order"
 
                 ]]
 

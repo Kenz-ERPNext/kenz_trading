@@ -96,6 +96,7 @@ frappe.ui.form.on("Sales Invoice", {
 
 
     refresh(frm) {
+        // frappe.msgprint("hii")
 
 
         // frm.fields_dict['items'].grid.get_field('item_code').get_query = function(doc, cdt, cdn) {
