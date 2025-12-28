@@ -330,7 +330,8 @@ fixtures = [
                 "Quotation-custom_po_no",
                 "Sales Invoice-custom_five_transaction",
                 "Sales Invoice-custom_last_five_transaction_details",
-            
+                "Sales Invoice-custom_section_break_kzlxf"
+                "Sales Invoice-custom_stock_details"
        
                 "Item-custom_minimum_sale_price",
                 "Item-custom_maximum_sale_price",

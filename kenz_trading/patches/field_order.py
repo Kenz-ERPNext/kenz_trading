@@ -1,99 +1,30 @@
-# import frappe
-# import json
-
-# def execute():
-#     doctype = "Purchase Invoice"
-#     property_name = "field_order"
-#     module_name = "Kenz Trading"  # ✅ Module must be set
-#     value = [
-#         "custom_new", "custom_test", "supplier", "supplier_name", "custom_a", "posting_date",
-#         "due_date", "custom_b", "is_paid", "is_return", "sec_warehouse", "scan_barcode",
-#         "last_scanned_warehouse", "col_break_warehouse", "update_stock", "set_warehouse",
-#         "set_from_warehouse", "is_subcontracted", "rejected_warehouse", "supplier_warehouse",
-#         "items_section", "items", "totals", "custom_test_totals", "total_qty",
-#         "total_taxes_and_charges", "taxes_and_charges", "in_words", "column_break_40",
-#         "total", "net_total", "grand_total", "rounding_adjustment", "rounded_total",
-#         "total_advance", "outstanding_amount", "section_break_44", "apply_discount_on",
-#         "base_discount_amount", "column_break_46", "additional_discount_percentage",
-#         "discount_amount", "custom_sub_details", "title", "naming_series", "tax_id",
-#         "company", "column_break_6", "posting_time", "set_posting_time", "column_break1",
-#         "return_against", "update_outstanding_for_self", "update_billed_amount_in_purchase_order",
-#         "update_billed_amount_in_purchase_receipt", "apply_tds", "tax_withholding_category",
-#         "amended_from", "accounting_dimensions_section", "color", "cost_center", "dimension_col_break",
-#         "branch", "project", "supplier_invoice_details", "bill_no", "column_break_15", "bill_date",
-#         "currency_and_price_list", "currency", "conversion_rate", "use_transaction_date_exchange_rate",
-#         "column_break2", "buying_price_list", "price_list_currency", "plc_conversion_rate",
-#         "ignore_pricing_rule", "section_break_26", "total_net_weight", "base_taxes_and_charges_added",
-#         "base_total_taxes_and_charges", "base_taxes_and_charges_deducted", "column_break_50",
-#         "base_total", "base_net_total", "column_break_28", "base_tax_withholding_net_total",
-#         "tax_withholding_net_total", "taxes_and_charges_added", "taxes_and_charges_deducted",
-#         "taxes_section", "tax_category", "column_break_58", "shipping_rule", "column_break_49",
-#         "incoterm", "named_place", "section_break_49", "base_grand_total", "base_rounding_adjustment",
-#         "base_rounded_total", "base_in_words", "column_break8", "use_company_roundoff_cost_center",
-#         "disable_rounded_total", "section_break_51", "taxes", "tax_withheld_vouchers_section",
-#         "tax_withheld_vouchers", "sec_tax_breakup", "other_charges_calculation",
-#         "pricing_rule_details", "pricing_rules", "raw_materials_supplied", "supplied_items",
-#         "payments_tab", "payments_section", "mode_of_payment", "base_paid_amount", "clearance_date",
-#         "col_br_payments", "cash_bank_account", "paid_amount", "advances_section",
-#         "allocate_advances_automatically", "only_include_allocated_payments", "get_advances",
-#         "advances", "advance_tax", "write_off", "write_off_amount", "base_write_off_amount",
-#         "column_break_61", "write_off_account", "write_off_cost_center", "address_and_contact_tab",
-#         "section_addresses", "supplier_address", "address_display", "col_break_address",
-#         "contact_person", "contact_display", "contact_mobile", "contact_email",
-#         "company_shipping_address_section", "dispatch_address", "dispatch_address_display",
-#         "column_break_126", "shipping_address", "shipping_address_display",
-#         "company_billing_address_section", "billing_address", "column_break_130",
-#         "billing_address_display", "terms_tab", "payment_schedule_section",
-#         "payment_terms_template", "ignore_default_payment_terms_template", "payment_schedule",
-#         "terms_section_break", "tc_name", "terms", "more_info_tab", "status_section",
-#         "status", "column_break_177", "per_received", "accounting_details_section", "credit_to",
-#         "party_account_currency", "is_opening", "against_expense_account", "column_break_63",
-#         "unrealized_profit_loss_account", "subscription_section", "subscription", "auto_repeat",
-#         "update_auto_repeat_reference", "column_break_114", "from_date", "to_date",
-#         "printing_settings", "letter_head", "group_same_items", "column_break_112",
-#         "select_print_heading", "language", "sb_14", "on_hold", "release_date", "cb_17",
-#         "hold_comment", "additional_info_section", "is_internal_supplier", "represents_company",
-#         "supplier_group", "column_break_147", "inter_company_invoice_reference",
-#         "is_old_subcontracting_flow", "remarks", "connections_tab"
-#     ]
-
-#     value_json = json.dumps(value, indent=4)
-
-#     ps = frappe.get_all("Property Setter",
-#         filters={
-#             "doctype_or_field": "DocType",
-#             "doc_type": doctype,
-#             "property": property_name
-#         },
-#         limit=1
-#     )
-
-#     if ps:
-#         doc = frappe.get_doc("Property Setter", ps[0].name)
-#         doc.value = value_json
-#         doc.module = module_name  # ✅ Set module in case missing
-#         doc.save()
-#         frappe.db.commit()
-#         print(f"Updated Property Setter: {doc.name}")
-#     else:
-#         doc = frappe.get_doc({
-#             "doctype": "Property Setter",
-#             "doctype_or_field": "DocType",
-#             "doc_type": doctype,
-#             "property": property_name,
-#             "property_type": "Data",
-#             "value": value_json,
-#             "module": module_name,
-#             "is_system_generated": 0
-#         })
-#         doc.insert(ignore_permissions=True)
-#         frappe.db.commit()
-#         print(f"Created Property Setter: {doc.name}")
-
-
 
 import frappe
 import json
+
+
+
+
+def upsert_custom_field(field_def):
+    """
+    Create or update a Custom Field to exactly match the definition
+    """
+    name = f"{field_def['dt']}-{field_def['fieldname']}"
+
+    if frappe.db.exists("Custom Field", name):
+        doc = frappe.get_doc("Custom Field", name)
+
+        for key, value in field_def.items():
+            if key not in ("doctype", "name", "modified", "docstatus"):
+                doc.set(key, value)
+
+        doc.save(ignore_permissions=True)
+        print(f"Updated Custom Field: {name}")
+
+    else:
+        doc = frappe.get_doc(field_def)
+        doc.insert(ignore_permissions=True)
+        print(f"Created Custom Field: {name}")
 
 def execute():
     property_setters = [
@@ -257,3 +188,38 @@ def execute():
             doc.insert(ignore_permissions=True)
             frappe.db.commit()
             print(f"Created Property Setter: {doc.name}")
+
+
+    # ---------------------------------------------------------
+    # CUSTOM FIELD UPSERT (NEW PART)
+    # ---------------------------------------------------------
+    custom_fields = [
+        {
+            "doctype": "Custom Field",
+            "dt": "Sales Invoice",
+            "fieldname": "custom_section_break_kzlxf",
+            "fieldtype": "Section Break",
+            "label": "Stock Details",
+            "insert_after": "set_target_warehouse",
+            "collapsible": 1,
+            "read_only": 0,
+            "module": "Kenz Trading"
+        },
+        {
+            "doctype": "Custom Field",
+            "dt": "Sales Invoice",
+            "fieldname": "custom_stock_details",
+            "fieldtype": "Text Editor",
+            "label": "Stock Details",
+            "insert_after": "custom_section_break_kzlxf",
+            "collapsible": 0,
+            "read_only": 0,
+            "module": "Kenz Trading"
+        }
+    ]
+
+    for field in custom_fields:
+        upsert_custom_field(field)
+
+    frappe.clear_cache()
+    frappe.db.commit()
