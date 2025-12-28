@@ -275,6 +275,11 @@ doc_events = {
 # ]
 
 
+after_migrate = [
+    "kenz_trading.patches.field_order.execute"
+]
+
+
 fixtures = [
    
     {
@@ -325,8 +330,8 @@ fixtures = [
                 "Quotation-custom_po_no",
                 "Sales Invoice-custom_five_transaction",
                 "Sales Invoice-custom_last_five_transaction_details",
-                "Sales Invoice-custom_stock_details",
-                "Sales Invoice-custom_section_break_kzlxf",
+            
+       
                 "Item-custom_minimum_sale_price",
                 "Item-custom_maximum_sale_price",
                 "Sales Order-custom_attention",
@@ -369,7 +374,7 @@ fixtures = [
                     "Customer-custom_vat_registration_number-allow_in_quick_entry",
                     "Purchase Invoice-update_stock-default",
                     "Sales Invoice-update_stock-default",
-                    
+
                     "Purchase Invoice-main-field_order",
                     "Sales Invoice-main-field_order"
 
