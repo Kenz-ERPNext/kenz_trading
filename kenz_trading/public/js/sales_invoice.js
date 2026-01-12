@@ -1,3 +1,6 @@
+
+
+
 let item_uoms = {};
 
 frappe.ui.form.on("Sales Invoice", {
@@ -81,7 +84,12 @@ frappe.ui.form.on("Sales Invoice", {
             }
         };
     },
+
+
     onload: function(frm) {
+
+
+        
         // Always show project field regardless of POS mode
         frm.set_df_property('project', 'hidden', 0);
         // Set default warehouse on form load if update_stock is enabled
@@ -89,6 +97,9 @@ frappe.ui.form.on("Sales Invoice", {
 
         set_item_query(frm);
     },
+
+
+
     update_stock: function(frm) {
         // Set or clear warehouse when update_stock is toggled
         set_default_warehouse(frm);
@@ -96,6 +107,8 @@ frappe.ui.form.on("Sales Invoice", {
 
 
     refresh(frm) {
+
+
         // frappe.msgprint("hii")
 
 
@@ -464,8 +477,10 @@ function set_default_warehouse(frm) {
 
 frappe.ui.form.on("Sales Invoice Item", {
 
+
     item_code: function (frm, cdt, cdn) {
         let row = locals[cdt][cdn];
+
         if (!row.item_code) return;
 
         // Fetch Item details for UOM handling only
@@ -581,8 +596,22 @@ frappe.ui.form.on("Sales Invoice Item", {
     },
 
     rate: function(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+         // store manual rate
+        row.__manual_rate = row.rate;
+
+        // wait for ERPNext async pricing to finish
+        setTimeout(() => {
+            if (row.rate !== row.__manual_rate) {
+                row.rate = row.__manual_rate;
+                frm.refresh_field("items");
+            }
+        }, 150);
+
         validate_item_rate(frm, cdt, cdn);
         validate_last_invoice_rate(frm, cdt, cdn);
+
+       
     },
 });
 
@@ -814,190 +843,6 @@ async function build_stock_table(frm, row) {
 }
 
 
-
-
-
-// async function build_stock_table(frm, row) {
-//     // frappe.msgprint("hii")
-
-//     let html = "";
-
-//     // ✅ Get current user
-//     let current_user = frappe.session.user;
-
-//     // ✅ Get Kenza Settings
-//     let settings_res = await frappe.call({
-//         method: "frappe.client.get",
-//         args: {
-//             doctype: "Kenza Settings"
-//         }
-//     });
-
-//     let restricted_users = settings_res.message.restricted_users || [];
-
-//     // ✅ Match current user with restriction table
-//     let user_settings = restricted_users.find(r => r.user === current_user) || {};
-
-//     // ✅ If user should NOT see stock table at all
-//     if (user_settings.dont_see_stock_details_table) {
-//         return `<p style="color:#999; padding:8px;"> Stock details are Restricted for your.  </p>`;
-//     }
-
-//     // Define column visibility
-//     let show_available_qty = !user_settings.dont_see_available_qty;
-//     let show_buying_price = !user_settings.dont_see_buying_price;
-//     let show_selling_price = !user_settings.dont_see_selling_price;
-
-
-//     // -----------------------------------
-
-//     let uoms_res = await frappe.call({
-//         method: "kenz_trading.events.sales_invoice.get_uoms",
-//         args: { item_code: row.item_code }
-//     });
-
-//     let uoms = uoms_res.message || [];
-
-//     let stock_res = await frappe.call({
-//         method: "frappe.client.get_list",
-//         args: {
-//             doctype: "Bin",
-//             filters: { item_code: row.item_code },
-//             fields: ["warehouse", "actual_qty"]
-//         }
-//     });
-
-//     let stock = stock_res.message || [];
-
-//     if (uoms.length > 0 || stock.length > 0) {
-
-//         // ✅ Table styling
-//         html += `
-//         <style>
-//             .custom-stock-table {
-//                 width: 100%;
-//                 border-collapse: collapse;
-//                 margin-top: 10px;
-//                 font-size: 13px;
-//             }
-
-//             .custom-stock-table th {
-//                 background-color: #1f4e79;
-//                 color: #ffffff;
-//                 padding: 10px;
-//                 height: 45px;
-//                 text-align: center;
-//             }
-
-//             .custom-stock-table td {
-//                 padding: 8px;
-//                 height: 38px;
-//                 text-align: center;
-//             }
-
-//             .custom-stock-table tr:nth-child(even) {
-//                 background-color: #f7f9fc;
-//             }
-
-//             .custom-stock-table tr:hover {
-//                 background-color: #eaf1ff;
-//             }
-//         </style>
-
-      
-
-//         <table class="table table-bordered custom-stock-table">
-//             <thead>
-//                 <tr>
-//                     <th>UOM</th>
-//                     <th>Conversion Factor</th>
-
-//                     ${show_selling_price ? `<th>Selling Price</th>` : ""}
-//                     ${show_buying_price ? `<th>Buying Price</th>` : ""}
-
-//                     <th>Warehouse</th>
-
-//                     ${show_available_qty ? `<th>Available Qty</th>` : ""}
-//                 </tr>
-//             </thead>
-//             <tbody>
-//         `;
-
-//         let maxRows = Math.max(uoms.length, stock.length);
-
-//         for (let i = 0; i < maxRows; i++) {
-
-//             let uom = uoms[i] || {};
-//             let stockItem = stock[i] || {};
-
-//             let selling_rate = "-";
-//             let buying_rate = "-";
-
-//             if (uom.uom) {
-
-//                 if (show_selling_price) {
-//                     let selling_price_res = await frappe.call({
-//                         method: "frappe.client.get_value",
-//                         args: {
-//                             doctype: "Item Price",
-//                             filters: {
-//                                 item_code: row.item_code,
-//                                 uom: uom.uom,
-//                                 price_list: frm.doc.selling_price_list || "Standard Selling"
-//                             },
-//                             fieldname: "price_list_rate"
-//                         }
-//                     });
-
-//                     if (selling_price_res.message)
-//                         selling_rate = selling_price_res.message.price_list_rate || "-";
-//                 }
-
-//                 if (show_buying_price) {
-//                     let buying_price_res = await frappe.call({
-//                         method: "frappe.client.get_value",
-//                         args: {
-//                             doctype: "Item Price",
-//                             filters: {
-//                                 item_code: row.item_code,
-//                                 uom: uom.uom,
-//                                 price_list: frm.doc.buying_price_list || "Standard Buying"
-//                             },
-//                             fieldname: "price_list_rate"
-//                         }
-//                     });
-
-//                     if (buying_price_res.message)
-//                         buying_rate = buying_price_res.message.price_list_rate || "-";
-//                 }
-//             }
-
-//             html += `
-//             <tr>
-//                 <td>${uom.uom || "-"}</td>
-//                 <td>${uom.conversion_factor || "-"}</td>
-
-//                 ${show_selling_price ? `<td>${selling_rate}</td>` : ""}
-//                 ${show_buying_price ? `<td>${buying_rate}</td>` : ""}
-
-//                 <td>${stockItem.warehouse || "-"}</td>
-
-//                 ${show_available_qty ? 
-//                     `<td style="font-weight:bold; color:${stockItem.actual_qty > 0 ? 'green' : 'red'}">
-//                         ${stockItem.actual_qty ?? "-"}
-//                     </td>` 
-//                 : ""}
-//             </tr>`;
-//         }
-
-//         html += `</tbody></table>`;
-//     }
-//     else {
-//         html = `<p style="color:#888;">No stock / UOM details found for this item</p>`;
-//     }
-
-//     return html;
-// }
 
 // SALES CODE/////
 
@@ -1620,3 +1465,6 @@ async function validate_last_invoice_rate(frm, cdt, cdn) {
         frm.refresh_field("items");
     }
 }
+
+
+
