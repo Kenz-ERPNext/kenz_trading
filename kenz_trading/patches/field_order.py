@@ -192,6 +192,7 @@ def execute():
 
      # -----------------------------
     # PROPERTY SETTER FOR SALES INVOICE ITEM FIELD ORDER
+    sales_item_doctype = frappe.get_doc("DocType", "Sales Invoice Item")
     # -----------------------------
     sales_invoice_item_field_order = [
         "barcode",
