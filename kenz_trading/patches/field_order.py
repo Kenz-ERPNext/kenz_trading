@@ -188,6 +188,156 @@ def execute():
             doc.insert(ignore_permissions=True)
             frappe.db.commit()
             print(f"Created Property Setter: {doc.name}")
+    
+
+     # -----------------------------
+    # PROPERTY SETTER FOR SALES INVOICE ITEM FIELD ORDER
+    # -----------------------------
+    sales_invoice_item_field_order = [
+        "barcode",
+        "has_item_scanned",
+        "item_code",
+        "uom",
+        "rate",
+        "qty",
+        "amount",
+        "remark",
+        "col_break1",
+        "item_name",
+        "customer_item_code",
+        "description_section",
+        "description",
+        "item_group",
+        "brand",
+        "image_section",
+        "image",
+        "image_view",
+        "quantity_and_rate",
+        "stock_uom",
+        "col_break2",
+        "conversion_factor",
+        "stock_qty",
+        "section_break_17",
+        "price_list_rate",
+        "base_price_list_rate",
+        "discount_and_margin",
+        "margin_type",
+        "margin_rate_or_amount",
+        "rate_with_margin",
+        "column_break_19",
+        "discount_percentage",
+        "discount_amount",
+        "base_rate_with_margin",
+        "section_break1",
+        "item_tax_template",
+        "custom_zatca_item_tax_category",
+        "tax_rate",
+        "tax_amount",
+        "total_amount",
+        "col_break3",
+        "base_rate",
+        "base_amount",
+        "pricing_rules",
+        "stock_uom_rate",
+        "is_free_item",
+        "grant_commission",
+        "section_break_21",
+        "net_rate",
+        "net_amount",
+        "column_break_24",
+        "base_net_rate",
+        "base_net_amount",
+        "drop_ship",
+        "delivered_by_supplier",
+        "accounting",
+        "income_account",
+        "is_fixed_asset",
+        "asset",
+        "finance_book",
+        "col_break4",
+        "expense_account",
+        "discount_account",
+        "deferred_revenue",
+        "deferred_revenue_account",
+        "service_stop_date",
+        "enable_deferred_revenue",
+        "column_break_50",
+        "service_start_date",
+        "service_end_date",
+        "section_break_18",
+        "weight_per_unit",
+        "total_weight",
+        "column_break_21",
+        "weight_uom",
+        "warehouse_and_reference",
+        "warehouse",
+        "target_warehouse",
+        "quality_inspection",
+        "pick_serial_and_batch",
+        "serial_and_batch_bundle",
+        "use_serial_batch_fields",
+        "col_break5",
+        "allow_zero_valuation_rate",
+        "incoming_rate",
+        "item_tax_rate",
+        "actual_batch_qty",
+        "actual_qty",
+        "section_break_eoec",
+        "serial_no",
+        "column_break_ytgd",
+        "batch_no",
+        "edit_references",
+        "sales_order",
+        "so_detail",
+        "sales_invoice_item",
+        "column_break_74",
+        "delivery_note",
+        "dn_detail",
+        "delivered_qty",
+        "internal_transfer_section",
+        "purchase_order",
+        "column_break_92",
+        "purchase_order_item",
+        "accounting_dimensions_section",
+        "cost_center",
+        "dimension_col_break",
+        "project",
+        "section_break_54",
+        "page_break"
+    ]
+
+    value_json = json.dumps(sales_invoice_item_field_order, indent=4)
+
+    existing = frappe.get_all("Property Setter",
+        filters={
+            "doctype_or_field": "DocType",
+            "doc_type": "Sales Invoice Item",
+            "property": "field_order"
+        },
+        limit=1
+    )
+
+    if existing:
+        doc = frappe.get_doc("Property Setter", existing[0].name)
+        doc.value = value_json
+        doc.module = "Kenz Trading"
+        doc.save()
+        frappe.db.commit()
+        print(f"Updated Property Setter for Sales Invoice Item: {doc.name}")
+    else:
+        doc = frappe.get_doc({
+            "doctype": "Property Setter",
+            "doctype_or_field": "DocType",
+            "doc_type": "Sales Invoice Item",
+            "property": "field_order",
+            "property_type": "Data",
+            "value": value_json,
+            "module": "Kenz Trading",
+            "is_system_generated": 0
+        })
+        doc.insert(ignore_permissions=True)
+        frappe.db.commit()
+        print(f"Created Property Setter for Sales Invoice Item: {doc.name}")
 
 
     # ---------------------------------------------------------
