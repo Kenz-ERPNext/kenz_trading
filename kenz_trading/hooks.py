@@ -378,7 +378,8 @@ fixtures = [
 
                     "Purchase Invoice-main-field_order",
                     "Sales Invoice-main-field_order",
-                    "Sales Invoice Item-main-field_order"
+                    "Sales Invoice Item-main-field_order",
+                    "Sales Invoice-is_pos-default"
 
                 ]]
 
