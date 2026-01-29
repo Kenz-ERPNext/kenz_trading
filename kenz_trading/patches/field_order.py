@@ -366,6 +366,16 @@ def execute():
             "collapsible": 0,
             "read_only": 0,
             "module": "Kenz Trading"
+        },
+
+        {
+            "doctype": "Custom Field",
+            "dt": "Item",
+            "fieldname": "custom_minimum_sale_price",
+            "fieldtype": "Currency",
+            "label": "Minimum Sale Price",
+            "insert_after": "custom_maximum_sale_price",
+            "module": "Kenz Trading"
         }
     ]
 

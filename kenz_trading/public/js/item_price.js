@@ -1,4 +1,11 @@
 frappe.ui.form.on('Item Price', {
+
+    refresh(frm){
+        // frappe.msgprint("hii")
+
+    },
+
+
     item_code(frm) {
         frm.set_value("uom", null);
 
