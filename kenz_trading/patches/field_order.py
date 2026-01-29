@@ -367,6 +367,15 @@ def execute():
             "read_only": 0,
             "module": "Kenz Trading"
         },
+        {
+            "doctype": "Custom Field",
+            "dt": "Item",
+            "fieldname": "custom_maximum_sale_price",
+            "fieldtype": "Currency",
+            "label": "Maximum Sale Price",
+            "insert_after": "custom_rack_number",
+            "module": "Kenz Trading"
+        },
 
         {
             "doctype": "Custom Field",
