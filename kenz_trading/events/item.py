@@ -89,48 +89,6 @@ def get_permission_query_conditions(user):
 
 
 
-# def get_permission_query_conditions(user):
-#     if user == "Administrator":
-#         return ""
-
-#     # user = "s@gmail.com"
-#     user_branch = frappe.defaults.get_user_default("Branch", user)
-#     print("User Branch:", user_branch)
-
-#     if not user_branch:
-#         return ""
-
-#     items_with_branches = frappe.db.sql("""
-#         SELECT ib.parent as item, GROUP_CONCAT(ib.branch) as branches
-#         FROM `tabBranches` ib
-#         GROUP BY ib.parent
-#     """, as_dict=True)
-
-#     for item in items_with_branches:
-#         print(f"Item: {item['item']} - Assigned Branches: {item['branches']}")
-
-#     return f"""
-#         (
-#             -- Items with no branch restriction
-#             NOT EXISTS (
-#                 SELECT 1
-#                 FROM `tabBranches` ib
-#                 WHERE ib.parent = `tabItem`.name
-#             )
-
-#             OR
-
-#             -- Items allowed for user's branch
-#             EXISTS (
-#                 SELECT 1
-#                 FROM `tabBranches` ib
-#                 WHERE
-#                     ib.parent = `tabItem`.name
-#                     AND ib.branch = '{user_branch}'
-#             )
-#         )
-#     """
-
 
 
 

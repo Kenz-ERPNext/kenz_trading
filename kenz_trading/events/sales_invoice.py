@@ -456,3 +456,43 @@ def validate_item_branch(doc, method):
 #             )
 
 
+@frappe.whitelist()
+def item_query_by_branch(doctype, txt, searchfield, start, page_len, filters):
+    branch = filters.get("branch")
+
+    return frappe.db.sql("""
+        SELECT DISTINCT i.name, i.item_name
+        FROM `tabItem` i
+        INNER JOIN `tabBranches` ib
+            ON ib.parent = i.name
+        WHERE
+            ib.branch = %(branch)s
+            AND (i.name LIKE %(txt)s OR i.item_name LIKE %(txt)s)
+        LIMIT %(start)s, %(page_len)s
+    """, {
+        "branch": branch,
+        "txt": f"%{txt}%",
+        "start": start,
+        "page_len": page_len
+    })
+
+
+# @frappe.whitelist()
+# def customer_query_by_branch(doctype, txt, searchfield, start, page_len, filters):
+#     branch = filters.get("branch")
+
+#     return frappe.db.sql("""
+#         SELECT DISTINCT c.name, c.customer_name
+#         FROM `tabCustomer` c
+#         INNER JOIN `tabCustomer Branches` cb
+#             ON cb.parent = c.name
+#         WHERE
+#             cb.branch = %(branch)s
+#             AND (c.name LIKE %(txt)s OR c.customer_name LIKE %(txt)s)
+#         LIMIT %(start)s, %(page_len)s
+#     """, {
+#         "branch": branch,
+#         "txt": f"%{txt}%",
+#         "start": start,
+#         "page_len": page_len
+#     })

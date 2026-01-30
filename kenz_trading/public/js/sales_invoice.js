@@ -112,19 +112,28 @@ frappe.ui.form.on("Sales Invoice", {
         // frappe.msgprint("hii")
 
 
-        // frm.fields_dict['items'].grid.get_field('item_code').get_query = function(doc, cdt, cdn) {
-        //     if (frm.doc.branch) {
-        //         // Filter by branch if branch is selected
-        //         return {
-        //             filters: {
-        //                 'custom_branch': frm.doc.branch
-        //             }
-        //         };
-        //     } else {
-               
-        //         return {};
-        //     }
-        // };
+        frm.fields_dict['items'].grid.get_field('item_code').get_query = function () {
+
+            if (!frm.doc.branch) return {};
+
+            return {
+                query: "kenz_trading.events.sales_invoice.item_query_by_branch",
+                filters: {
+                    branch: frm.doc.branch
+                }
+            };
+        };
+
+        frm.set_query("customer", function () {
+            return {
+                filters: {
+                    // custom_agent: 0,
+                    custom_branch: frm.doc.branch
+                }
+            };
+        });
+
+
 
         if (!frm.doc.__islocal) return; 
 
@@ -615,18 +624,6 @@ frappe.ui.form.on("Sales Invoice Item", {
     },
 });
 
-
-// function set_item_query(frm) {
-//     frm.fields_dict["items"].grid.get_field("item_code").get_query = function(doc, cdt, cdn) {
-//         let row = locals[cdt][cdn];
-//         return {
-//             query: "kenz_trading.events.sales_invoice.get_items_by_branch",
-//             filters: {
-//                 branch: frappe.defaults.get_user_default("Branch")
-//             }
-//         };
-//     };
-// }
 
 function set_item_query(frm) {
     frm.fields_dict["items"].grid.get_field("item_code").get_query = function(doc, cdt, cdn) {
