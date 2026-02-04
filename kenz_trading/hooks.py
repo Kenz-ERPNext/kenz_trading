@@ -154,9 +154,11 @@ has_permission = {
 # Hook on document methods and events
 
 doc_events = {
-	  "Customer":{
-         "before_insert":"kenz_trading.events.customer.customer_auto_name"
-    },
+	#   "Customer":{
+    #      "before_insert":"kenz_trading.events.customer.customer_auto_name"
+    # },
+
+
     "Warehouse":{
         "validate":"kenz_trading.events.warehouse.validate_warehouse"
     },
