@@ -8,7 +8,7 @@ from frappe.model.document import Document
 class KenzaSettings(Document):
 	# pass 
 
-
+ 
 	@frappe.whitelist()
 	def create_tc(self):
 		"""Create Tax Category"""

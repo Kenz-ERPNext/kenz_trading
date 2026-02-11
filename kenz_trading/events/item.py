@@ -49,7 +49,7 @@ def get_permission_query_conditions(user):
     print("User Branch:", user_branch)
 
     if not user_branch:
-        return ""
+        return "" 
 
     # Fetch all items with their assigned branches
     items_with_branches = frappe.db.sql("""

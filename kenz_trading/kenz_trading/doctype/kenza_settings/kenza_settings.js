@@ -6,7 +6,7 @@
 frappe.ui.form.on("Kenza Settings", {
 	refresh(frm) {
 
-	},
+	}, 
 
     create_tax_category: function(frm) {
 
