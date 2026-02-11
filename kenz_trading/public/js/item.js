@@ -10,12 +10,12 @@ frappe.ui.form.on('Item', {
     if (frm.is_new()) {
 
       // --- 1️⃣ Default Branch ---
-      if (!frm.doc.custom_branches?.length) {
+      if (!frm.doc.custom_branch_list?.length) {
         const branchRes = await frappe.db.get_value('Branch', { custom_is_default: 1 }, 'name');
         if (branchRes.message && branchRes.message.name) {
-          let row = frm.add_child('custom_branches');
+          let row = frm.add_child('custom_branch_list');
           row.branch = branchRes.message.name;
-          frm.refresh_field('custom_branches');
+          frm.refresh_field('custom_branch_list');
         }
       }
 
