@@ -230,9 +230,9 @@ frappe.ui.form.on("Item", {
         let tax_template = res.sales_taxes_and_charges_template;
         let item_tax_templates = res.default__tax_template
 
-        // ------------------------------
-        // 1️⃣ CHILD TABLE TAXES
-        // ------------------------------
+        // // ------------------------------
+        // // 1️⃣ CHILD TABLE TAXES
+        // // ------------------------------
         if (tax_category || tax_template) {
 
             // Clear existing rows (optional)
@@ -249,14 +249,14 @@ frappe.ui.form.on("Item", {
         // 2️⃣ CUSTOM FIELD SET
         // ------------------------------
         // If custom field exists in Item
-        if (frm.fields_dict.custom_item_tax_template) {
+        // if (frm.fields_dict.custom_item_tax_template) {
 
-            // Set value from Kenza Settings
-            frm.set_value(
-                "custom_item_tax_template",
-                item_tax_templates
-            );
-        }
+        //     // Set value from Kenza Settings
+        //     frm.set_value(
+        //         "custom_item_tax_template",
+        //         item_tax_templates
+        //     );
+        // }
     }
 
     
