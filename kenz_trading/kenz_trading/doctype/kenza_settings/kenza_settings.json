@@ -39,7 +39,6 @@
   "column_break_mcvp",
   "create_tax_template",
   "sales_taxes_and_charges_template",
-  "default__tax_template",
   "quotation_section",
   "enable_create_sales_invoice"
  ],
@@ -244,19 +243,13 @@
    "fieldname": "enable_create_sales_invoice",
    "fieldtype": "Check",
    "label": "Enable Create Sales Invoice"
-  },
-  {
-   "fieldname": "default__tax_template",
-   "fieldtype": "Link",
-   "label": "Default  Tax Template",
-   "options": "Item Tax Template"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-02-12 09:02:08.216887",
+ "modified": "2026-02-12 09:58:41.654329",
  "modified_by": "Administrator",
  "module": "Kenz Trading",
  "name": "Kenza Settings",
