@@ -229,18 +229,33 @@ frappe.ui.form.on("Item", {
         let tax_category = res.tax_category;
         let tax_template = res.sales_taxes_and_charges_template;
 
-        if (!tax_category && !tax_template) return;
+        // ------------------------------
+        // 1️⃣ CHILD TABLE TAXES
+        // ------------------------------
+        if (tax_category || tax_template) {
 
-        // Clear existing taxes (optional — remove if not needed)
-        frm.clear_table("taxes");
+            // Clear existing rows (optional)
+            frm.clear_table("taxes");
 
-        // Add row in Item Taxes child table
-        let row = frm.add_child("taxes");
+            let row = frm.add_child("taxes");
+            row.item_tax_template = tax_template;
+            row.tax_category = tax_category;
 
-        row.item_tax_template = tax_template;
-        row.tax_category = tax_category;
+            frm.refresh_field("taxes");
+        }
 
-        frm.refresh_field("taxes");
+        // ------------------------------
+        // 2️⃣ CUSTOM FIELD SET
+        // ------------------------------
+        // If custom field exists in Item
+        if (frm.fields_dict.custom_item_tax_template) {
+
+            // Set value from Kenza Settings
+            frm.set_value(
+                "custom_item_tax_template",
+                tax_template
+            );
+        }
     }
 
     
