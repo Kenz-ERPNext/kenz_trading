@@ -228,7 +228,7 @@ frappe.ui.form.on("Item", {
 
         let tax_category = res.tax_category;
         let tax_template = res.sales_taxes_and_charges_template;
-        let item_tax_templates = res.default__tax_template
+        // let item_tax_templates = res.default__tax_template
 
         // // ------------------------------
         // // 1️⃣ CHILD TABLE TAXES
