@@ -180,15 +180,13 @@
    "fieldname": "tax_category",
    "fieldtype": "Link",
    "label": "Tax Category",
-   "options": "Tax Category",
-   "read_only": 1
+   "options": "Tax Category"
   },
   {
    "fieldname": "sales_taxes_and_charges_template",
    "fieldtype": "Link",
    "label": "Sales Taxes and Charges Template",
-   "options": "Sales Taxes and Charges Template",
-   "read_only": 1
+   "options": "Sales Taxes and Charges Template"
   },
   {
    "depends_on": "eval:doc.create_tax_category_and_template",
@@ -200,8 +198,7 @@
    "fieldname": "account",
    "fieldtype": "Link",
    "label": "Account",
-   "options": "Account",
-   "read_only": 1
+   "options": "Account"
   },
   {
    "depends_on": "eval:doc.create_tax_category_and_template",
@@ -249,7 +246,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-02-12 09:58:41.654329",
+ "modified": "2026-02-12 10:42:37.039743",
  "modified_by": "Administrator",
  "module": "Kenz Trading",
  "name": "Kenza Settings",
