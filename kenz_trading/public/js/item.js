@@ -227,7 +227,7 @@ frappe.ui.form.on("Item", {
         if (!res) return;
 
         let tax_category = res.tax_category;
-        let tax_template = res.sales_taxes_and_charges_template;
+        let tax_template = res.default_item_tax_template;
         // let item_tax_templates = res.default__tax_template
 
         // // ------------------------------
