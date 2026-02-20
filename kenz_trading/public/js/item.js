@@ -109,6 +109,8 @@ frappe.ui.form.on("Item", {
 
     async refresh(frm) {
 
+        // frappe.msgprint("hii")
+
         if (!frm.is_new()) return;
 
         // ==============================

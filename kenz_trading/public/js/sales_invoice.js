@@ -5,6 +5,7 @@ let item_uoms = {};
 
 frappe.ui.form.on("Sales Invoice", {
 
+
  
     before_save: async function(frm) {
         // ----------------------------

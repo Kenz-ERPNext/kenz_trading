@@ -32,63 +32,57 @@ import re
 #         )
 #         OR `tabItem`.name NOT IN (
 #             SELECT DISTINCT parent FROM `tabBranches`
-#         ))
-#     """
- 
+
+
 
 
 
 
 def get_permission_query_conditions(user):
+    if not user:
+        user = frappe.session.user
+
+    # Admin full access
     if user == "Administrator":
         return ""
 
-    # Set user for testing
-    user = "s@gmail.com"
-    user_branch = frappe.defaults.get_user_default("Branch", user)
-    print("User Branch:", user_branch)
+    # Check if user has any User Permission for Branch
+    user_permissions = frappe.get_all(
+        "User Permission",
+        filters={
+            "user": user,
+            "allow": "Branch"
+        },
+        fields=["for_value"]
+    )
 
-    if not user_branch:
-        return "" 
+    # If no User Permission → allow all items
+    if not user_permissions:
+        return ""
 
-    # Fetch all items with their assigned branches
-    items_with_branches = frappe.db.sql("""
-        SELECT ib.parent as item, GROUP_CONCAT(ib.branch) as branches
-        FROM `tabBranches` ib
-        GROUP BY ib.parent
-    """, as_dict=True)
+    # Get all allowed branches
+    allowed_branches = [frappe.db.escape(p.for_value) for p in user_permissions]
 
-    # Print which items user can access
-    for item in items_with_branches:
-        item_branches = item['branches'].split(",")  # List of branches
-        if user_branch in item_branches:
-            print(f"User can access Item: {item['item']} - Assigned Branches: {item['branches']}")
-        else:
-            print(f"User CANNOT access Item: {item['item']} - Assigned Branches: {item['branches']}")
+    allowed_branches_str = ", ".join(allowed_branches)
 
-    # SQL condition for Frappe permission
+    # Apply restriction
     return f"""
-        (
-            -- Items with no branch restriction
-            NOT EXISTS (
-                SELECT 1
-                FROM `tabBranches` ib
-                WHERE ib.parent = `tabItem`.name
-            )
-            OR
-            -- Items allowed for user's branch
-            EXISTS (
-                SELECT 1
-                FROM `tabBranches` ib
-                WHERE
-                    ib.parent = `tabItem`.name
-                    AND ib.branch = '{user_branch}'
-            )
+    (
+        NOT EXISTS (
+            SELECT 1
+            FROM `tabBranches` ib
+            WHERE ib.parent = `tabItem`.name
         )
+        OR
+        EXISTS (
+            SELECT 1
+            FROM `tabBranches` ib
+            WHERE
+                ib.parent = `tabItem`.name
+                AND ib.branch IN ({allowed_branches_str})
+        )
+    )
     """
-
-
-
 
 
 
