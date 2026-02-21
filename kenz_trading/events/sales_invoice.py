@@ -54,6 +54,9 @@ def on_submits(doc, method):
     if not frappe.db.get_single_value("Kenza Settings", "auto_create_payment"):
         return
 
+    if doc.is_return:
+        return
+
     if not doc.custom_mode_of_payment:
         return    
 
@@ -112,7 +115,7 @@ def on_submits(doc, method):
         "allocated_amount": doc.outstanding_amount
     })
 
-    pe.insert(ignore_permissions=True)
+    pe.insert()
     pe.submit()
 
     frappe.msgprint(f"Payment Entry <b>{pe.name}</b> created successfully", indicator="green")
