@@ -51,7 +51,11 @@ doctype_js = {
     "Customer" :"public/js/customer.js",
     "Item Price" : "public/js/item_price.js"
 }
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
+
+
+doctype_list_js = {
+    "Sales Invoice": "public/js/sales_invoice_list.js"
+    }
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -130,7 +134,7 @@ permission_query_conditions = {
     "Item": "kenz_trading.events.item.get_permission_query_conditions"
 
     
-}
+} 
 
 
 has_permission = {

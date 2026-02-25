@@ -22,6 +22,8 @@
   "purchase_search_window",
   "item_qty_search_window",
   "auto_create_payment",
+  "section_break_bbjp",
+  "enable_bulk_edit",
   "section_break_bkws",
   "restricted_users",
   "section_break_tdir",
@@ -247,13 +249,23 @@
    "fieldtype": "Link",
    "label": "Default Item Tax Template",
    "options": "Item Tax Template"
+  },
+  {
+   "fieldname": "section_break_bbjp",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_bulk_edit",
+   "fieldtype": "Check",
+   "label": "Enable Bulk Print"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-02-12 10:59:45.369329",
+ "modified": "2026-02-25 14:19:31.705504",
  "modified_by": "Administrator",
  "module": "Kenz Trading",
  "name": "Kenza Settings",
