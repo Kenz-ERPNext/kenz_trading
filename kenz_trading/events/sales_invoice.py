@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import getdate, nowtime
+from frappe.utils import getdate, nowtime, flt, cint, round_based_on_smallest_currency_fraction
 from frappe import _
 from num2words import num2words
 
@@ -439,24 +439,93 @@ def get_items_by_branch(doctype, txt, searchfield, start, page_len, filters):
 
 @frappe.whitelist()
 def validate_item_branch(doc, method):
-    pass
-#     user_branch = frappe.defaults.get_user_default("Branch")
+    fix_inclusive_tax_rounding(doc)
 
-#     for row in doc.items:
-#         branch_rows = frappe.db.get_all(
-#             "Branches",
-#             filters={"parent": row.item_code},
-#             pluck="branch"
-#         )
 
-#         # OPEN item → allowed
-#         if not branch_rows:
-#             continue
+def fix_inclusive_tax_rounding(doc):
+    """Fix rounding discrepancy between Total and Grand Total for inclusive taxes.
 
-#         if user_branch not in branch_rows:
-#             frappe.throw(
-#                 f"Item {row.item_code} not allowed for Branch {user_branch}"
-#             )
+    ERPNext back-calculates net_amount per row when tax is included in rate.
+    Per-row rounding causes cumulative errors on invoices with many items,
+    making grand_total != total. This adjusts grand_total to match total
+    when all taxes are inclusive.
+    """
+    if not doc.get("taxes"):
+        return
+
+    has_inclusive = False
+    non_inclusive_tax_amount = 0.0
+
+    for tax in doc.taxes:
+        if cint(tax.included_in_print_rate):
+            has_inclusive = True
+        else:
+            non_inclusive_tax_amount += flt(tax.tax_amount_after_discount_amount)
+
+    if not has_inclusive:
+        return
+
+    # Expected grand total: item total + any non-inclusive taxes
+    expected_grand_total = flt(doc.total + non_inclusive_tax_amount, doc.precision("grand_total"))
+    diff = flt(expected_grand_total - doc.grand_total, doc.precision("grand_total"))
+
+    if not diff:
+        return
+
+    # Safety bound: max rounding error = 0.01 per item row (conservative)
+    max_allowed_diff = len(doc.items) * 0.01
+    if abs(diff) > max_allowed_diff:
+        return
+
+    # Adjust grand_total
+    doc.grand_total = expected_grand_total
+    doc.base_grand_total = flt(
+        doc.grand_total * doc.conversion_rate, doc.precision("base_grand_total")
+    )
+
+    # Recalculate total_taxes_and_charges
+    doc.total_taxes_and_charges = flt(
+        doc.grand_total - doc.net_total, doc.precision("total_taxes_and_charges")
+    )
+    doc.base_total_taxes_and_charges = flt(
+        doc.total_taxes_and_charges * doc.conversion_rate,
+        doc.precision("base_total_taxes_and_charges"),
+    )
+
+    # Adjust last tax row to reflect the corrected total
+    last_tax = doc.taxes[-1]
+    last_tax.total = flt(doc.grand_total, last_tax.precision("total"))
+    last_tax.base_total = flt(
+        last_tax.total * doc.conversion_rate, last_tax.precision("base_total")
+    )
+    last_tax.tax_amount = flt(last_tax.tax_amount + diff, last_tax.precision("tax_amount"))
+    last_tax.tax_amount_after_discount_amount = flt(
+        last_tax.tax_amount_after_discount_amount + diff,
+        last_tax.precision("tax_amount_after_discount_amount"),
+    )
+    last_tax.base_tax_amount = flt(
+        last_tax.tax_amount * doc.conversion_rate, last_tax.precision("base_tax_amount")
+    )
+    last_tax.base_tax_amount_after_discount_amount = flt(
+        last_tax.tax_amount_after_discount_amount * doc.conversion_rate,
+        last_tax.precision("base_tax_amount_after_discount_amount"),
+    )
+
+    # Recalculate rounded_total and rounding_adjustment
+    if doc.meta.get_field("rounded_total") and not doc.is_rounded_total_disabled():
+        doc.rounded_total = round_based_on_smallest_currency_fraction(
+            doc.grand_total, doc.currency, doc.precision("rounded_total")
+        )
+        doc.rounding_adjustment = flt(
+            doc.rounded_total - doc.grand_total, doc.precision("rounding_adjustment")
+        )
+        doc.base_rounded_total = flt(
+            doc.rounded_total * doc.conversion_rate, doc.precision("base_rounded_total")
+        )
+        doc.base_rounding_adjustment = flt(
+            doc.rounding_adjustment * doc.conversion_rate,
+            doc.precision("base_rounding_adjustment"),
+        )
 
 
 @frappe.whitelist()
