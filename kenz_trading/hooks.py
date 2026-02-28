@@ -145,14 +145,9 @@ has_permission = {
 # ---------------
 # Override standard doctype classes
 
-# override_doctype_class = {
-# 	"ToDo": "custom_app.overrides.CustomToDo"
-# }
-
-
-# override_doctype_class = {
-#     "Item": "kenz_trading.events.item.CustomItem"
-# }
+override_doctype_class = {
+    "Sales Invoice Additional Fields": "kenz_trading.overrides.zatca_fix.CustomSalesInvoiceAdditionalFields"
+}
 # Document Events
 # ---------------
 # Hook on document methods and events
