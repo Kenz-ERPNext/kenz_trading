@@ -58,7 +58,10 @@ def on_submits(doc, method):
         return
 
     if not doc.custom_mode_of_payment:
-        return    
+        return
+
+    if not doc.outstanding_amount or doc.outstanding_amount <= 0:
+        return
 
     paid_to_account = frappe.db.get_value(
         "Mode of Payment Account",
