@@ -19,6 +19,12 @@ def get_uoms(item_code):
 
 @frappe.whitelist()
 def on_submits(doc, method):
+    # Fix inclusive tax rounding and force-save to database.
+    # The validate/before_submit hooks may not persist because ERPNext
+    # recalculates after hooks run.  on_submit runs after db_update(),
+    # so we correct values here and write them directly to the database.
+    _force_fix_inclusive_tax_on_submit(doc)
+
     # ✅ Item Variants section
     if frappe.db.get_single_value("Kenza Settings", "activate_item_variant_save"):
         for row in doc.items:
@@ -455,6 +461,86 @@ def before_submit_fix(doc, method):
     the database write.
     """
     fix_inclusive_tax_rounding(doc)
+
+
+def _force_fix_inclusive_tax_on_submit(doc):
+    """Apply inclusive tax rounding fix and write corrected values directly to DB.
+
+    on_submit runs after the document is already saved to the database.
+    We re-run the fix on the in-memory doc, then push the corrected values
+    straight into the database using db_set / SQL so nothing can overwrite them.
+    """
+    if not doc.get("taxes"):
+        return
+
+    has_inclusive = any(cint(t.included_in_print_rate) for t in doc.taxes)
+    if not has_inclusive:
+        return
+
+    # Snapshot values before fix
+    old_gt = doc.grand_total
+
+    fix_inclusive_tax_rounding(doc)
+
+    # If grand_total didn't change, nothing to do
+    if doc.grand_total == old_gt:
+        return
+
+    # Adjust outstanding_amount by the same delta as grand_total
+    gt_change = flt(doc.grand_total - old_gt, doc.precision("grand_total"))
+    doc.outstanding_amount = flt(
+        flt(doc.outstanding_amount) + gt_change, doc.precision("outstanding_amount")
+    )
+
+    # Force-write corrected parent fields to the database
+    frappe.db.set_value(
+        "Sales Invoice",
+        doc.name,
+        {
+            "net_total": doc.net_total,
+            "base_net_total": doc.base_net_total,
+            "grand_total": doc.grand_total,
+            "base_grand_total": doc.base_grand_total,
+            "total_taxes_and_charges": doc.total_taxes_and_charges,
+            "base_total_taxes_and_charges": doc.base_total_taxes_and_charges,
+            "outstanding_amount": doc.outstanding_amount,
+            "rounded_total": doc.rounded_total,
+            "base_rounded_total": doc.base_rounded_total,
+            "rounding_adjustment": doc.rounding_adjustment,
+            "base_rounding_adjustment": doc.base_rounding_adjustment,
+        },
+        update_modified=False,
+    )
+
+    # Force-write corrected item rows
+    for row in doc.items:
+        frappe.db.set_value(
+            "Sales Invoice Item",
+            row.name,
+            {
+                "net_amount": row.net_amount,
+                "base_net_amount": row.base_net_amount,
+                "net_rate": row.net_rate,
+                "base_net_rate": row.base_net_rate,
+            },
+            update_modified=False,
+        )
+
+    # Force-write corrected tax rows
+    for tax in doc.taxes:
+        frappe.db.set_value(
+            "Sales Taxes and Charges",
+            tax.name,
+            {
+                "tax_amount": tax.tax_amount,
+                "base_tax_amount": tax.base_tax_amount,
+                "tax_amount_after_discount_amount": tax.tax_amount_after_discount_amount,
+                "base_tax_amount_after_discount_amount": tax.base_tax_amount_after_discount_amount,
+                "total": tax.total,
+                "base_total": tax.base_total,
+            },
+            update_modified=False,
+        )
 
 
 def fix_inclusive_tax_rounding(doc):
