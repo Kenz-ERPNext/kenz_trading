@@ -446,32 +446,36 @@ def validate_item_branch(doc, method):
 
 
 def fix_inclusive_tax_rounding(doc):
-    """Fix rounding discrepancy for inclusive taxes at both row and document level.
+    """Fix rounding discrepancy for inclusive taxes at row and document level.
 
     ERPNext back-calculates net_amount per row when tax is included in rate.
     Per-row rounding causes:
     1. Row-level: total_amount (net_amount + tax_amount) != amount (rate * qty)
-    2. Doc-level: grand_total != total (sum of item amounts)
+    2. Doc-level: net_total (sum of per-row net_amounts) drifts from the
+       mathematically correct value (grand_total / (1 + rate/100)), making
+       total_taxes_and_charges wrong even when grand_total is correct.
 
-    This fixes both by adjusting per-row tax_amount/total_amount and then
-    correcting grand_total to match total.
+    This fixes per-row total_amount, then recalculates net_total and
+    total_taxes_and_charges from grand_total using the actual tax rate.
     """
     if not doc.get("taxes"):
         return
 
     has_inclusive = False
     has_non_inclusive = False
+    inclusive_rate = 0.0
 
     for tax in doc.taxes:
         if cint(tax.included_in_print_rate):
             has_inclusive = True
+            inclusive_rate += flt(tax.rate)
         else:
             has_non_inclusive = True
 
     if not has_inclusive:
         return
 
-    # --- Fix per-row total_amount ---
+    # --- Fix 1: Per-row total_amount ---
     # When all taxes are inclusive, amount (rate * qty) is the correct inclusive
     # total. But net_amount + tax_amount can differ by 0.01 due to rounding in
     # the back-calculation. Adjust tax_amount to absorb the rounding difference
@@ -490,56 +494,116 @@ def fix_inclusive_tax_rounding(doc):
                         row.net_amount + row.tax_amount, row.precision("total_amount")
                     )
 
-    # --- Fix document-level grand_total ---
+    # --- Fix 2: Document-level grand_total ---
+    # Ensure grand_total = total + non-inclusive taxes
     non_inclusive_tax_amount = 0.0
     for tax in doc.taxes:
         if not cint(tax.included_in_print_rate):
             non_inclusive_tax_amount += flt(tax.tax_amount_after_discount_amount)
 
     expected_grand_total = flt(doc.total + non_inclusive_tax_amount, doc.precision("grand_total"))
-    diff = flt(expected_grand_total - doc.grand_total, doc.precision("grand_total"))
+    gt_diff = flt(expected_grand_total - doc.grand_total, doc.precision("grand_total"))
 
-    if not diff:
+    if gt_diff:
+        max_allowed_diff = len(doc.items) * 0.01
+        if abs(gt_diff) <= max_allowed_diff:
+            doc.grand_total = expected_grand_total
+            doc.base_grand_total = flt(
+                doc.grand_total * doc.conversion_rate, doc.precision("base_grand_total")
+            )
+
+    # --- Fix 3: Net/tax split from grand_total ---
+    # When all taxes are inclusive, recalculate the correct tax and net amounts
+    # from grand_total using the tax rate, instead of relying on the sum of
+    # per-row back-calculated net_amounts which accumulates rounding errors.
+    if has_non_inclusive or inclusive_rate <= 0:
+        # Mixed inclusive/non-inclusive: fall back to simple recalc
+        doc.total_taxes_and_charges = flt(
+            doc.grand_total - doc.net_total, doc.precision("total_taxes_and_charges")
+        )
+        doc.base_total_taxes_and_charges = flt(
+            doc.total_taxes_and_charges * doc.conversion_rate,
+            doc.precision("base_total_taxes_and_charges"),
+        )
         return
 
-    # Safety bound: max rounding error = 0.01 per item row (conservative)
-    max_allowed_diff = len(doc.items) * 0.01
-    if abs(diff) > max_allowed_diff:
+    correct_tax = flt(
+        doc.grand_total * inclusive_rate / (100 + inclusive_rate),
+        doc.precision("total_taxes_and_charges"),
+    )
+    correct_net = flt(doc.grand_total - correct_tax, doc.precision("net_total"))
+
+    net_diff = flt(correct_net - doc.net_total, doc.precision("net_total"))
+
+    if not net_diff and not gt_diff:
         return
 
-    # Adjust grand_total
-    doc.grand_total = expected_grand_total
-    doc.base_grand_total = flt(
-        doc.grand_total * doc.conversion_rate, doc.precision("base_grand_total")
-    )
+    # Safety: accumulated rounding should not exceed a reasonable bound
+    if abs(net_diff) > len(doc.items) * 0.10:
+        return
 
-    # Recalculate total_taxes_and_charges
-    doc.total_taxes_and_charges = flt(
-        doc.grand_total - doc.net_total, doc.precision("total_taxes_and_charges")
+    # Fix document-level amounts
+    doc.net_total = correct_net
+    doc.base_net_total = flt(
+        correct_net * doc.conversion_rate, doc.precision("base_net_total")
     )
+    doc.total_taxes_and_charges = correct_tax
     doc.base_total_taxes_and_charges = flt(
-        doc.total_taxes_and_charges * doc.conversion_rate,
+        correct_tax * doc.conversion_rate,
         doc.precision("base_total_taxes_and_charges"),
     )
 
-    # Adjust last tax row to reflect the corrected total
-    last_tax = doc.taxes[-1]
-    last_tax.total = flt(doc.grand_total, last_tax.precision("total"))
-    last_tax.base_total = flt(
-        last_tax.total * doc.conversion_rate, last_tax.precision("base_total")
-    )
-    last_tax.tax_amount = flt(last_tax.tax_amount + diff, last_tax.precision("tax_amount"))
-    last_tax.tax_amount_after_discount_amount = flt(
-        last_tax.tax_amount_after_discount_amount + diff,
-        last_tax.precision("tax_amount_after_discount_amount"),
-    )
-    last_tax.base_tax_amount = flt(
-        last_tax.tax_amount * doc.conversion_rate, last_tax.precision("base_tax_amount")
-    )
-    last_tax.base_tax_amount_after_discount_amount = flt(
-        last_tax.tax_amount_after_discount_amount * doc.conversion_rate,
-        last_tax.precision("base_tax_amount_after_discount_amount"),
-    )
+    # Absorb the net rounding difference in the last item row so that
+    # net_total == sum of row net_amounts
+    if net_diff and doc.items:
+        last_item = doc.items[-1]
+        last_item.net_amount = flt(
+            last_item.net_amount + net_diff, last_item.precision("net_amount")
+        )
+        last_item.base_net_amount = flt(
+            last_item.net_amount * doc.conversion_rate,
+            last_item.precision("base_net_amount"),
+        )
+        if flt(last_item.qty):
+            last_item.net_rate = flt(
+                last_item.net_amount / last_item.qty, last_item.precision("net_rate")
+            )
+            last_item.base_net_rate = flt(
+                last_item.net_rate * doc.conversion_rate,
+                last_item.precision("base_net_rate"),
+            )
+        last_item.tax_amount = flt(
+            last_item.amount - last_item.net_amount, last_item.precision("tax_amount")
+        )
+        last_item.total_amount = flt(
+            last_item.net_amount + last_item.tax_amount,
+            last_item.precision("total_amount"),
+        )
+
+    # Fix tax rows — distribute correct_tax proportionally across inclusive rows
+    for tax in doc.taxes:
+        if not cint(tax.included_in_print_rate):
+            continue
+        if inclusive_rate:
+            row_tax = flt(
+                correct_tax * flt(tax.rate) / inclusive_rate,
+                tax.precision("tax_amount"),
+            )
+        else:
+            row_tax = correct_tax
+        tax.tax_amount = row_tax
+        tax.tax_amount_after_discount_amount = row_tax
+        tax.base_tax_amount = flt(
+            row_tax * doc.conversion_rate, tax.precision("base_tax_amount")
+        )
+        tax.base_tax_amount_after_discount_amount = flt(
+            row_tax * doc.conversion_rate,
+            tax.precision("base_tax_amount_after_discount_amount"),
+        )
+        tax.total = flt(doc.grand_total, tax.precision("total"))
+        tax.base_total = flt(
+            doc.grand_total * doc.conversion_rate, tax.precision("base_total")
+        )
 
     # Recalculate rounded_total and rounding_adjustment
     if doc.meta.get_field("rounded_total") and not doc.is_rounded_total_disabled():
