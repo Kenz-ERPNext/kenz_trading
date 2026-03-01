@@ -5,34 +5,30 @@ from kenz_trading.events.sales_invoice import fix_inclusive_tax_rounding
 
 
 class CustomSalesInvoice(SalesInvoice):
-    def validate(self):
-        super().validate()
-        fix_inclusive_tax_rounding(self)
-
-    def before_submit(self):
-        super().before_submit()
+    def calculate_taxes_and_totals(self):
+        """Override to fix inclusive tax rounding immediately after every
+        ERPNext tax calculation.  This ensures no downstream code ever
+        sees the unfixed values, regardless of how many times
+        calculate_taxes_and_totals() is called during the save/submit
+        lifecycle."""
+        super().calculate_taxes_and_totals()
         fix_inclusive_tax_rounding(self)
 
     def on_submit(self):
-        # Snapshot before fix
+        """Safety net: if values are still wrong by on_submit (e.g. an
+        external hook recalculated without going through our override),
+        fix them and force-write to the database before GL entries are
+        created."""
         old_gt = self.grand_total
         old_net = self.net_total
 
-        # Apply fix BEFORE parent on_submit (which makes GL entries)
         fix_inclusive_tax_rounding(self)
 
-        # If values changed, force-write to DB so GL entries use correct amounts
         if self.grand_total != old_gt or self.net_total != old_net:
             self.db_update()
             for row in self.items:
                 row.db_update()
             for tax in self.taxes:
                 tax.db_update()
-
-            frappe.msgprint(
-                f"Tax rounding fix applied: Net {old_net} → {self.net_total}, "
-                f"Grand {old_gt} → {self.grand_total}",
-                indicator="blue",
-            )
 
         super().on_submit()
