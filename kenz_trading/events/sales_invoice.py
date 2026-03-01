@@ -446,29 +446,56 @@ def validate_item_branch(doc, method):
 
 
 def fix_inclusive_tax_rounding(doc):
-    """Fix rounding discrepancy between Total and Grand Total for inclusive taxes.
+    """Fix rounding discrepancy for inclusive taxes at both row and document level.
 
     ERPNext back-calculates net_amount per row when tax is included in rate.
-    Per-row rounding causes cumulative errors on invoices with many items,
-    making grand_total != total. This adjusts grand_total to match total
-    when all taxes are inclusive.
+    Per-row rounding causes:
+    1. Row-level: total_amount (net_amount + tax_amount) != amount (rate * qty)
+    2. Doc-level: grand_total != total (sum of item amounts)
+
+    This fixes both by adjusting per-row tax_amount/total_amount and then
+    correcting grand_total to match total.
     """
     if not doc.get("taxes"):
         return
 
     has_inclusive = False
-    non_inclusive_tax_amount = 0.0
+    has_non_inclusive = False
 
     for tax in doc.taxes:
         if cint(tax.included_in_print_rate):
             has_inclusive = True
         else:
-            non_inclusive_tax_amount += flt(tax.tax_amount_after_discount_amount)
+            has_non_inclusive = True
 
     if not has_inclusive:
         return
 
-    # Expected grand total: item total + any non-inclusive taxes
+    # --- Fix per-row total_amount ---
+    # When all taxes are inclusive, amount (rate * qty) is the correct inclusive
+    # total. But net_amount + tax_amount can differ by 0.01 due to rounding in
+    # the back-calculation. Adjust tax_amount to absorb the rounding difference
+    # so that total_amount == amount.
+    if not has_non_inclusive:
+        meta = frappe.get_meta(doc.items[0].doctype) if doc.items else None
+        if meta and meta.has_field("total_amount"):
+            for row in doc.items:
+                expected_total = flt(row.amount, row.precision("total_amount"))
+                current_total = flt(row.total_amount, row.precision("total_amount"))
+                if current_total != expected_total:
+                    row.tax_amount = flt(
+                        row.amount - row.net_amount, row.precision("tax_amount")
+                    )
+                    row.total_amount = flt(
+                        row.net_amount + row.tax_amount, row.precision("total_amount")
+                    )
+
+    # --- Fix document-level grand_total ---
+    non_inclusive_tax_amount = 0.0
+    for tax in doc.taxes:
+        if not cint(tax.included_in_print_rate):
+            non_inclusive_tax_amount += flt(tax.tax_amount_after_discount_amount)
+
     expected_grand_total = flt(doc.total + non_inclusive_tax_amount, doc.precision("grand_total"))
     diff = flt(expected_grand_total - doc.grand_total, doc.precision("grand_total"))
 
