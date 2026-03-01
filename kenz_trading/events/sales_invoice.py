@@ -445,6 +445,18 @@ def validate_item_branch(doc, method):
     fix_inclusive_tax_rounding(doc)
 
 
+def before_submit_fix(doc, method):
+    """Re-apply inclusive tax rounding fix just before submit save.
+
+    During submit, ERPNext's calculate_taxes_and_totals() recalculates
+    from scratch, reintroducing rounding errors. The validate hook fix
+    may be overwritten by other apps' hooks that run later. This
+    before_submit hook ensures the fix is the last modification before
+    the database write.
+    """
+    fix_inclusive_tax_rounding(doc)
+
+
 def fix_inclusive_tax_rounding(doc):
     """Fix rounding discrepancy for inclusive taxes at row and document level.
 
