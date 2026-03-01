@@ -146,7 +146,8 @@ has_permission = {
 # Override standard doctype classes
 
 override_doctype_class = {
-    "Sales Invoice Additional Fields": "kenz_trading.overrides.zatca_fix.CustomSalesInvoiceAdditionalFields"
+    "Sales Invoice Additional Fields": "kenz_trading.overrides.zatca_fix.CustomSalesInvoiceAdditionalFields",
+    "Sales Invoice": "kenz_trading.overrides.sales_invoice_override.CustomSalesInvoice",
 }
 # Document Events
 # ---------------
@@ -164,10 +165,7 @@ doc_events = {
 
     "Sales Invoice":{
         "on_submit":"kenz_trading.events.sales_invoice.on_submits",
-        "validate": "kenz_trading.events.sales_invoice.validate_item_branch",
-        "before_submit": "kenz_trading.events.sales_invoice.before_submit_fix",
         "has_permission": "kenz_trading.events.item.item_has_permission"
-
     },
 
 }
