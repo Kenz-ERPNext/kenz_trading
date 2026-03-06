@@ -1,6 +1,4 @@
-
-
-// frappe.listview_settings["Sales Invoice"] = {
+// frappe.listview_settings["Stock Entry"] = {
 //     onload: function(listview) {
 
 //         frappe.call({
@@ -15,63 +13,6 @@
 
 //                     listview.page.add_inner_button("Bulk Print Preview", function() {
 
-//                         let filters = listview.get_filters_for_args();
-
-//                         frappe.call({
-//                             method: "kenz_trading.api.bulk_print.get_sales_invoice_names",
-//                             args: { filters: filters },
-//                             freeze: true,
-//                             freeze_message: __("Preparing Combined PDF... Please wait..."),
-//                             callback: function(res) {
-
-//                                 if (res.message && res.message.length) {
-
-//                                     let names = res.message;
-
-//                                     let w = window.open(
-//                                         frappe.urllib.get_full_url(
-//                                             "/api/method/frappe.utils.print_format.download_multi_pdf?"
-//                                             + "doctype=Sales Invoice"
-//                                             + "&name=" + JSON.stringify(names)
-//                                             + "&format=Standard"
-//                                             + "&no_letterhead=0"
-//                                         )
-//                                     );
-
-//                                 } else {
-//                                     frappe.msgprint("No Submitted Sales Invoices found.");
-//                                 }
-//                             }
-//                         });
-
-//                     });
-
-//                 }
-//             }
-//         });
-
-//     }
-// };
-
-
-
-
-// frappe.listview_settings["Sales Invoice"] = {
-//     onload: function(listview) {
-
-//         frappe.call({
-//             method: "frappe.client.get_value",
-//             args: {
-//                 doctype: "Kenza Settings",
-//                 fieldname: "enable_bulk_edit"
-//             },
-//             callback: function(r) {
-
-//                 if (r.message && r.message.enable_bulk_edit) {
-
-//                     listview.page.add_inner_button("Bulk Print Preview", function() {
-
-//                         // -------- PRINT FORMAT DIALOG --------
 //                         let d = new frappe.ui.Dialog({
 //                             title: "Select Print Format",
 //                             fields: [
@@ -84,7 +25,7 @@
 //                                     get_query: function () {
 //                                         return {
 //                                             filters: {
-//                                                 doc_type: "Sales Invoice"
+//                                                 doc_type: "Stock Entry"
 //                                             }
 //                                         };
 //                                     }
@@ -100,7 +41,7 @@
 //                                 let filters = listview.get_filters_for_args();
 
 //                                 frappe.call({
-//                                     method: "kenz_trading.api.bulk_print.get_sales_invoice_names",
+//                                     method: "kenz_trading.api.bulk_print.get_stock_entry_names",
 //                                     args: { filters: filters },
 //                                     freeze: true,
 //                                     freeze_message: __("Preparing Combined PDF... Please wait..."),
@@ -113,7 +54,7 @@
 //                                             window.open(
 //                                                 frappe.urllib.get_full_url(
 //                                                     "/api/method/frappe.utils.print_format.download_multi_pdf?"
-//                                                     + "doctype=Sales Invoice"
+//                                                     + "doctype=Stock Entry"
 //                                                     + "&name=" + JSON.stringify(names)
 //                                                     + "&format=" + selected_format
 //                                                     + "&no_letterhead=0"
@@ -121,7 +62,7 @@
 //                                             );
 
 //                                         } else {
-//                                             frappe.msgprint("No Submitted Sales Invoices found.");
+//                                             frappe.msgprint("No Submitted Stock Entries found.");
 //                                         }
 //                                     }
 //                                 });
@@ -144,8 +85,7 @@
 
 
 
-
-frappe.listview_settings["Sales Invoice"] = {
+frappe.listview_settings["Stock Entry"] = {
     onload: function(listview) {
 
         frappe.db.get_single_value("Kenza Settings", "enable_bulk_edit").then(value => {
@@ -166,7 +106,7 @@ frappe.listview_settings["Sales Invoice"] = {
                                 get_query: function () {
                                     return {
                                         filters: {
-                                            doc_type: "Sales Invoice"
+                                            doc_type: "Stock Entry"
                                         }
                                     };
                                 }
@@ -182,7 +122,7 @@ frappe.listview_settings["Sales Invoice"] = {
                             let filters = listview.get_filters_for_args();
 
                             frappe.call({
-                                method: "kenz_trading.api.bulk_print.get_sales_invoice_names",
+                                method: "kenz_trading.api.bulk_print.get_stock_entry_names",
                                 args: { filters: filters },
                                 freeze: true,
                                 freeze_message: __("Preparing Combined PDF... Please wait..."),
@@ -195,7 +135,7 @@ frappe.listview_settings["Sales Invoice"] = {
                                         window.open(
                                             frappe.urllib.get_full_url(
                                                 "/api/method/frappe.utils.print_format.download_multi_pdf?"
-                                                + "doctype=Sales Invoice"
+                                                + "doctype=Stock Entry"
                                                 + "&name=" + JSON.stringify(names)
                                                 + "&format=" + selected_format
                                                 + "&no_letterhead=0"
@@ -203,7 +143,7 @@ frappe.listview_settings["Sales Invoice"] = {
                                         );
 
                                     } else {
-                                        frappe.msgprint("No Submitted Sales Invoices found.");
+                                        frappe.msgprint("No Submitted Stock Entries found.");
                                     }
                                 }
                             });
