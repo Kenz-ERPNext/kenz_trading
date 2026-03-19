@@ -73,6 +73,8 @@ frappe.ui.form.on("Sales Invoice", {
         frm.set_value("custom_session_user", frappe.session.user);
         default_branch(frm);
     },
+
+    
     setup: function (frm) {
         frm.fields_dict["items"].grid.get_field("uom").get_query = function (doc, cdt, cdn) {
             let row = locals[cdt][cdn];
@@ -81,7 +83,9 @@ frappe.ui.form.on("Sales Invoice", {
                     filters: [["UOM", "name", "in", item_uoms[row.item_code]]]
                 };
             } else {
-                return {};
+                return {
+                    filters: [["UOM", "name", "=", ""]]
+                };
             }
         };
     },
