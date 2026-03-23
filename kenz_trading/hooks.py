@@ -359,7 +359,10 @@ fixtures = [
                 "Mode of Payment-custom_branch",
                 "Item-custom_branch_list",
                 "Item-custom_rack_number",
-                "Sales Invoice Item-custom_rack_number"
+                "Sales Invoice Item-custom_rack_number",
+                "Sales Order-custom_last_five",
+                "Sales Order-custom_last_five_transaction_details",
+                "Sales Order-custom_session_user"
                 
 
 
