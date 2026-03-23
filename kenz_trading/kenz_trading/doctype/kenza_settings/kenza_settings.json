@@ -43,7 +43,17 @@
   "sales_taxes_and_charges_template",
   "default_item_tax_template",
   "quotation_section",
-  "enable_create_sales_invoice"
+  "enable_create_sales_invoice",
+  "sales_order_tab",
+  "show_item_variant_tables",
+  "minimum_and_maximum_rate_validations",
+  "last_invoice_item_rate_validations",
+  "last_invoice",
+  "column_break_opds",
+  "show_last_5_sales_and_purchase_transactions",
+  "show_sale_search_window",
+  "show_purchase_search_window",
+  "show_item_qty_search_window"
  ],
  "fields": [
   {
@@ -259,13 +269,70 @@
    "fieldname": "enable_bulk_edit",
    "fieldtype": "Check",
    "label": "Enable Bulk Print"
+  },
+  {
+   "fieldname": "sales_order_tab",
+   "fieldtype": "Tab Break",
+   "label": "Sales Order"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_last_5_sales_and_purchase_transactions",
+   "fieldtype": "Check",
+   "label": "Last 5 purchase Transaction"
+  },
+  {
+   "default": "0",
+   "fieldname": "minimum_and_maximum_rate_validations",
+   "fieldtype": "Check",
+   "label": " Minimum and Maximum Rate Validation"
+  },
+  {
+   "fieldname": "column_break_opds",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "last_invoice_item_rate_validations",
+   "fieldtype": "Check",
+   "label": " Last Invoice Item Rate Validation"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_sale_search_window",
+   "fieldtype": "Check",
+   "label": "Show Sale Search Window"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_purchase_search_window",
+   "fieldtype": "Check",
+   "label": "Show Purchase Search Window"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_item_qty_search_window",
+   "fieldtype": "Check",
+   "label": "Show Item Qty search Window"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_item_variant_tables",
+   "fieldtype": "Check",
+   "label": "Show Item Variant Table"
+  },
+  {
+   "default": "0",
+   "fieldname": "last_invoice",
+   "fieldtype": "Check",
+   "label": "Last Invoice Item Rate Validation"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-02-25 14:19:31.705504",
+ "modified": "2026-03-23 13:06:03.883941",
  "modified_by": "Administrator",
  "module": "Kenz Trading",
  "name": "Kenza Settings",
