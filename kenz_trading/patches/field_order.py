@@ -317,7 +317,7 @@ def execute():
         },
         limit=1
     )
-
+ 
     if existing:
         doc = frappe.get_doc("Property Setter", existing[0].name)
         doc.value = value_json
@@ -384,6 +384,42 @@ def execute():
             "fieldtype": "Currency",
             "label": "Minimum Sale Price",
             "insert_after": "custom_maximum_sale_price",
+            "module": "Kenz Trading"
+        },
+
+        {
+            "doctype": "Custom Field",
+            "dt": "Sales Order",
+            "fieldname": "custom_last_five",
+            "fieldtype": "Section Break",
+            "label": "",
+            "insert_after": "items",
+            "collapsible": 0,
+            "read_only": 0,
+            "module": "Kenz Trading"
+        },
+
+        {
+            "doctype": "Custom Field",
+            "dt": "Sales Order",
+            "fieldname": "custom_last_five_transaction_details",
+            "fieldtype": "HTML",
+            "label": "Last Five Transaction Details",
+            "insert_after": "custom_last_five",
+            "read_only": 1,
+            "module": "Kenz Trading"
+        },
+        
+        {
+            "doctype": "Custom Field",
+            "dt": "Sales Order",
+            "fieldname": "custom_session_user",
+            "fieldtype": "Link",
+            "label": "Session User",
+            "options": "User",
+            "insert_after": "po_date",
+            "read_only": 1,
+            "hidden": 1,
             "module": "Kenz Trading"
         }
     ]
