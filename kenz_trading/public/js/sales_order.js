@@ -69,10 +69,10 @@ frappe.ui.form.on("Sales Order", {
         // Always show project field regardless of POS mode
         frm.set_df_property('project', 'hidden', 0);
     },
-    customer: function (frm) {
-        frm.set_value("custom_session_user", frappe.session.user);
-        default_branch(frm);
-    },
+    // customer: function (frm) {
+    //     frm.set_value("custom_session_user", frappe.session.user);
+    //     default_branch(frm);
+    // },
 
     
     setup: function (frm) {
@@ -129,14 +129,14 @@ frappe.ui.form.on("Sales Order", {
             };
         };
 
-        frm.set_query("customer", function () {
-            return {
-                filters: {
-                    // custom_agent: 0,
-                    custom_branch: frm.doc.branch
-                }
-            };
-        });
+        // frm.set_query("customer", function () {
+        //     return {
+        //         filters: {
+        //             // custom_agent: 0,
+        //             custom_branch: frm.doc.branch
+        //         }
+        //     };
+        // });
 
 
 
@@ -440,19 +440,19 @@ function set_pos_value(frm) {
     }
 }
 
-function default_branch(frm) {
-    frappe.call({
-        method: "kenz_trading.events.sales_order.get_default_branch",
-        args: {
-            user: frappe.session.user,
-        },
-        callback: function (r) {
-            if (r.message) {
-                frm.set_value("branch", r.message);
-            }
-        },
-    });
-}
+// function default_branch(frm) {
+//     frappe.call({
+//         method: "kenz_trading.events.sales_order.get_default_branch",
+//         args: {
+//             user: frappe.session.user,
+//         },
+//         callback: function (r) {
+//             if (r.message) {
+//                 frm.set_value("branch", r.message);
+//             }
+//         },
+//     });
+// }
 
 function set_default_warehouse(frm) {
     if (frm.doc.update_stock && frm.doc.company) {
@@ -493,122 +493,252 @@ function set_default_warehouse(frm) {
 frappe.ui.form.on("Sales Order Item", {
 
 
-    item_code: function (frm, cdt, cdn) {
-        let row = locals[cdt][cdn];
 
+    item_code: function (frm, cdt, cdn) {
+
+        let row = locals[cdt][cdn];
         if (!row.item_code) return;
 
-        // Fetch Item details for UOM handling only
-        frappe.call({
-            method: "frappe.client.get",
-            args: { doctype: "Item", name: row.item_code },
-            callback: function(r) {
-                if (r.message) {
+        // ✅ WAIT for ERPNext default item fetch
+        setTimeout(() => {
+
+            // -----------------------------
+            // UOM + Rack Number
+            // -----------------------------
+            frappe.call({
+                method: "frappe.client.get",
+                args: { doctype: "Item", name: row.item_code },
+                callback: function(r) {
+
+                    if (!r.message) return;
+
                     let allowed_uoms = (r.message.uoms || []).map(u => u.uom);
                     item_uoms[row.item_code] = allowed_uoms;
 
                     let grid_row = frm.fields_dict["items"].grid.grid_rows_by_docname[cdn];
+
                     if (grid_row) {
                         grid_row.get_field("uom").get_query = () => ({
                             filters: [["UOM", "name", "in", allowed_uoms]]
                         });
                     }
 
-                    // Reset UOM if invalid
+                    // Reset invalid UOM
                     if (row.uom && !allowed_uoms.includes(row.uom)) {
                         frappe.model.set_value(cdt, cdn, "uom", "");
                     }
 
-                    frappe.model.set_value(cdt,cdn,"custom_rack_number",
-                    r.message.custom_rack_number || ""
-                );
-
+                    // Set rack number
+                    frappe.model.set_value(
+                        cdt,
+                        cdn,
+                        "custom_rack_number",
+                        r.message.custom_rack_number || ""
+                    );
                 }
-            }
-        });
+            });
 
+            // -----------------------------
+            // Variant Table (Kenza Settings)
+            // -----------------------------
+            frappe.call({
+                method: "frappe.client.get_value",
+                args: {
+                    doctype: "Kenza Settings",
+                    fieldname: "show_item_variant_tables"
+                },
+                callback: function (res) {
 
+                    if (!res.message || !res.message.show_item_variant_tables) return;
 
-        frappe.call({
-            method: "frappe.client.get_value",
-            args: {
-                doctype: "Kenza Settings",
-                fieldname: "show_item_variant_tables",
-                filters: {}
-            },
-            callback: function (res) {
-                // Only continue if checkbox is checked
-                if (!res.message || !res.message.show_item_variant_tables) {
-                    return;
-                }
+                    frappe.call({
+                        method: "kenz_trading.events.sales_order.get_last_variant_transactions",
+                        args: {
+                            customer: frm.doc.customer,
+                            item_code: row.item_code
+                        },
+                        callback: function (r) {
 
-                // YOUR EXISTING FUNCTION — runs only if checkbox is enabled
-                frappe.call({
-                    method: "kenz_trading.events.sales_order.get_last_variant_transactions",
-                    args: {
-                        customer: frm.doc.customer,
-                        item_code: row.item_code
-                    },
-                    callback: function (r) {
+                            if (!r.message || r.message.length === 0) {
+                                frm.set_df_property("last_variant_transaction", "options", "");
+                                return;
+                            }
 
-                        if (!r.message || r.message.length === 0) {
-                            frm.set_df_property("last_variant_transaction", "options", "");
-                            return;
-                        }
+                            let html = `
+                                <div style="max-height:300px; overflow:auto;">
+                                <table class="table table-bordered table-sm">
+                                    <thead style="background:#f5f5f5;">
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Invoice No</th>
+                                            <th>Variant</th>
+                                            <th>Rate</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>`;
 
-                        let html = `
-                            <div style="max-height:300px; overflow:auto;">
-                            <table class="table table-bordered table-sm" style="margin:0;">
-                                <thead style="background:#f5f5f5;">
+                            r.message.forEach(d => {
+                                html += `
                                     <tr>
-                                        <th>Date</th>
-                                        <th>Invoice No</th>
-                                        <th>Variant</th>
-                                        <th>Rate</th>
-                                    </tr>
-                                </thead>
-                                <tbody>`;
+                                        <td>${d.submitted_date || ""}</td>
+                                        <td>${d.s_invoice_no || ""}</td>
+                                        <td>${d.variant_name || ""}</td>
+                                        <td>${d.rate || ""}</td>
+                                    </tr>`;
+                            });
 
-                        r.message.forEach(d => {
-                            html += `
-                                <tr>
-                                    <td>${d.submitted_date || ""}</td>
-                                    <td>${d.s_invoice_no || ""}</td>
-                                    <td>${d.variant_name || ""}</td>
-                                    <td>${d.rate || ""}</td>
-                                </tr>`;
-                        });
+                            html += `</tbody></table></div>`;
 
-                        html += `</tbody></table></div>`;
+                            frm.set_df_property("last_variant_transaction", "options", html);
 
-                        // Set to HTML field
-                        frm.set_df_property("last_variant_transaction", "options", html);
+                            frappe.msgprint({
+                                title: __("Last Variant Transactions"),
+                                message: html,
+                                wide: true
+                            });
+                        }
+                    });
+                }
+            });
 
-                        // Show popup
-                        frappe.msgprint({
-                            title: __("Last Variant Transactions"),
-                            message: html,
-                            wide: true
-                        });
+            // -----------------------------
+            // Other Logic
+            // -----------------------------
+            load_item_transaction_details(row.item_code, frm);
+            validate_item_rate(frm, cdt, cdn);
+            validate_last_invoice_rate(frm, cdt, cdn);
 
-                    }
-                });
-            }
-        });
+            build_stock_table(frm, row).then(html => {
+                if (frm.fields_dict.custom_stock_details) {
+                    $(frm.fields_dict.custom_stock_details.wrapper).html(html);
+                }
+            });
 
-        load_item_transaction_details(row.item_code,frm)
-        validate_item_rate(frm, cdt, cdn);
-        validate_last_invoice_rate(frm, cdt, cdn);
+            set_item_query(frm);
 
-        build_stock_table(frm, row).then(html => {
-            if (frm.fields_dict.custom_stock_details) {
-                $(frm.fields_dict.custom_stock_details.wrapper).html(html);
-            }
-        });
-
-        set_item_query(frm);
+        }, 300); // 🔥 VERY IMPORTANT
 
     },
+
+
+
+    // item_code: function (frm, cdt, cdn) {
+    //     let row = locals[cdt][cdn];
+
+
+    //     if (!row.item_code) return;
+
+    //     // Fetch Item details for UOM handling only
+    //     frappe.call({
+    //         method: "frappe.client.get",
+    //         args: { doctype: "Item", name: row.item_code },
+    //         callback: function(r) {
+    //             if (r.message) {
+    //                 let allowed_uoms = (r.message.uoms || []).map(u => u.uom);
+    //                 item_uoms[row.item_code] = allowed_uoms;
+
+    //                 let grid_row = frm.fields_dict["items"].grid.grid_rows_by_docname[cdn];
+    //                 if (grid_row) {
+    //                     grid_row.get_field("uom").get_query = () => ({
+    //                         filters: [["UOM", "name", "in", allowed_uoms]]
+    //                     });
+    //                 }
+
+    //                 // Reset UOM if invalid
+    //                 if (row.uom && !allowed_uoms.includes(row.uom)) {
+    //                     frappe.model.set_value(cdt, cdn, "uom", "");
+    //                 }
+
+    //                 frappe.model.set_value(cdt,cdn,"custom_rack_number",
+    //                 r.message.custom_rack_number || ""
+    //             );
+
+    //             }
+    //         }
+    //     });
+
+
+
+    //     frappe.call({
+    //         method: "frappe.client.get_value",
+    //         args: {
+    //             doctype: "Kenza Settings",
+    //             fieldname: "show_item_variant_tables",
+    //             filters: {}
+    //         },
+    //         callback: function (res) {
+    //             // Only continue if checkbox is checked
+    //             if (!res.message || !res.message.show_item_variant_tables) {
+    //                 return;
+    //             }
+
+    //             // YOUR EXISTING FUNCTION — runs only if checkbox is enabled
+    //             frappe.call({
+    //                 method: "kenz_trading.events.sales_order.get_last_variant_transactions",
+    //                 args: {
+    //                     customer: frm.doc.customer,
+    //                     item_code: row.item_code
+    //                 },
+    //                 callback: function (r) {
+
+    //                     if (!r.message || r.message.length === 0) {
+    //                         frm.set_df_property("last_variant_transaction", "options", "");
+    //                         return;
+    //                     }
+
+    //                     let html = `
+    //                         <div style="max-height:300px; overflow:auto;">
+    //                         <table class="table table-bordered table-sm" style="margin:0;">
+    //                             <thead style="background:#f5f5f5;">
+    //                                 <tr>
+    //                                     <th>Date</th>
+    //                                     <th>Invoice No</th>
+    //                                     <th>Variant</th>
+    //                                     <th>Rate</th>
+    //                                 </tr>
+    //                             </thead>
+    //                             <tbody>`;
+
+    //                     r.message.forEach(d => {
+    //                         html += `
+    //                             <tr>
+    //                                 <td>${d.submitted_date || ""}</td>
+    //                                 <td>${d.s_invoice_no || ""}</td>
+    //                                 <td>${d.variant_name || ""}</td>
+    //                                 <td>${d.rate || ""}</td>
+    //                             </tr>`;
+    //                     });
+
+    //                     html += `</tbody></table></div>`;
+
+    //                     // Set to HTML field
+    //                     frm.set_df_property("last_variant_transaction", "options", html);
+
+    //                     // Show popup
+    //                     frappe.msgprint({
+    //                         title: __("Last Variant Transactions"),
+    //                         message: html,
+    //                         wide: true
+    //                     });
+
+    //                 }
+    //             });
+    //         }
+    //     });
+
+    //     load_item_transaction_details(row.item_code,frm)
+    //     validate_item_rate(frm, cdt, cdn);
+    //     validate_last_invoice_rate(frm, cdt, cdn);
+
+    //     build_stock_table(frm, row).then(html => {
+    //         if (frm.fields_dict.custom_stock_details) {
+    //             $(frm.fields_dict.custom_stock_details.wrapper).html(html);
+    //         }
+    //     });
+
+    //     set_item_query(frm);
+
+    // },
 
     rate: function(frm, cdt, cdn) {
         let row = locals[cdt][cdn];
@@ -631,23 +761,23 @@ frappe.ui.form.on("Sales Order Item", {
 });
 
 
-function set_item_query(frm) {
-    frm.fields_dict["items"].grid.get_field("item_code").get_query = function(doc, cdt, cdn) {
-        let row = locals[cdt][cdn];
+// function set_item_query(frm) {
+//     frm.fields_dict["items"].grid.get_field("item_code").get_query = function(doc, cdt, cdn) {
+//         let row = locals[cdt][cdn];
 
-        // Only apply query if branch exists
-        if (!frm.doc.branch) {
-            return {};  // empty query, shows all items or no filter
-        }
+//         // Only apply query if branch exists
+//         if (!frm.doc.branch) {
+//             return {};  // empty query, shows all items or no filter
+//         }
 
-        return {
-            query: "kenz_trading.events.sales_order.get_items_by_branch",
-            filters: {
-                branch: frm.doc.branch  // use frm.doc.branch if exists
-            }
-        };
-    };
-}
+//         return {
+//             query: "kenz_trading.events.sales_order.get_items_by_branch",
+//             filters: {
+//                 branch: frm.doc.branch  // use frm.doc.branch if exists
+//             }
+//         };
+//     };
+// }
 
 
 
