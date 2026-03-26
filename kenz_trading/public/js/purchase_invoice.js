@@ -4,6 +4,8 @@ frappe.ui.form.on('Purchase Invoice', {
 
     refresh(frm) {
         // frappe.msgprint("hii")
+        load_item_uoms(frm);
+        set_uom_query(frm);
 
 
     },
@@ -24,6 +26,7 @@ frappe.ui.form.on('Purchase Invoice', {
 
 
     onload(frm) {
+        load_item_uoms(frm);
         // Set default warehouse if update_stock is checked
         if (frm.doc.update_stock) {
             frappe.call({
@@ -58,12 +61,54 @@ frappe.ui.form.on('Purchase Invoice', {
 
 
 
+function load_item_uoms(frm) {
+    (frm.doc.items || []).forEach(row => {
+        if (row.item_code) {
+            frappe.call({
+                method: "frappe.client.get",
+                args: {
+                    doctype: "Item",
+                    name: row.item_code
+                },
+                async: false, // IMPORTANT to ensure sync load
+                callback: function (r) {
+                    if (r.message) {
+                        item_uoms[row.item_code] = (r.message.uoms || []).map(d => d.uom);
+                    }
+                }
+            });
+        }
+    });
+}
+
+
+
+function set_uom_query(frm) {
+    frm.fields_dict["items"].grid.get_field("uom").get_query = function (doc, cdt, cdn) {
+        let row = locals[cdt][cdn];
+
+        if (row.item_code && item_uoms[row.item_code]) {
+            return {
+                filters: [
+                    ["UOM", "name", "in", item_uoms[row.item_code]]
+                ]
+            };
+        } else {
+            return {
+                filters: [
+                    ["UOM", "name", "=", ""]
+                ]
+            };
+        }
+    };
+}
+
 let item_uoms = {};
 
 frappe.ui.form.on("Purchase Invoice Item", {
-    item_code: function (frm, cdt, cdn) {
-        let row = locals[cdt][cdn];
 
+    item_code(frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
         if (!row.item_code) return;
 
         frappe.call({
@@ -75,28 +120,15 @@ frappe.ui.form.on("Purchase Invoice Item", {
             callback: function (r) {
                 if (r.message) {
 
-                    // Get allowed UOMs
                     let allowed_uoms = (r.message.uoms || []).map(d => d.uom);
                     item_uoms[row.item_code] = allowed_uoms;
 
-                    // Apply filter to UOM field
-                    let grid_row = frm.fields_dict["items"].grid.grid_rows_by_docname[cdn];
-                    if (grid_row) {
-                        grid_row.get_field("uom").get_query = function () {
-                            return {
-                                filters: [
-                                    ["UOM", "name", "in", allowed_uoms]
-                                ]
-                            };
-                        };
-                    }
-
+                    // Reset invalid UOM
                     if (row.uom && !allowed_uoms.includes(row.uom)) {
                         frappe.model.set_value(cdt, cdn, "uom", "");
                     }
 
-                   
-                   
+                    frm.refresh_field("items"); // 🔥 IMPORTANT
                 }
             }
         });
