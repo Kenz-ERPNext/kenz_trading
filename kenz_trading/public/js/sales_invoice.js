@@ -606,6 +606,7 @@ frappe.ui.form.on("Sales Invoice Item", {
         });
 
         set_item_query(frm);
+        calculate_item_tax_total(frm, cdt, cdn);
 
     },
 
@@ -620,14 +621,51 @@ frappe.ui.form.on("Sales Invoice Item", {
                 row.rate = row.__manual_rate;
                 frm.refresh_field("items");
             }
+            calculate_item_tax_total(frm, cdt, cdn);
+
         }, 150);
 
         validate_item_rate(frm, cdt, cdn);
         validate_last_invoice_rate(frm, cdt, cdn);
-
+        
        
     },
+
+    qty: function(frm, cdt, cdn) {
+        setTimeout(() => {
+            calculate_item_tax_total(frm, cdt, cdn);
+        }, 150);
+    },
+
 });
+
+
+function calculate_item_tax_total(frm, cdt, cdn) {
+    let row = locals[cdt][cdn];
+
+    if (!row.item_code) return;
+
+    let base_amount = flt(row.qty) * flt(row.rate);
+
+    // get total tax %
+    let total_tax_percent = 0;
+
+    (frm.doc.taxes || []).forEach(tax => {
+        if (tax.rate) {
+            total_tax_percent += flt(tax.rate);
+        }
+    });
+
+    let tax_amount = (base_amount * total_tax_percent) / 100;
+
+    let total_with_tax = base_amount + tax_amount;
+
+    frappe.model.set_value(cdt, cdn, "custom_item_total_with_tax", total_with_tax);
+}
+
+
+
+
 
 
 function set_item_query(frm) {
