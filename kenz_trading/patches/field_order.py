@@ -421,6 +421,29 @@ def execute():
             "read_only": 1,
             "hidden": 1,
             "module": "Kenz Trading"
+        },
+
+        {
+            "doctype": "Custom Field",
+            "dt": "Sales Invoice Item",
+            "fieldname": "custom_item_total_with_tax",
+            "fieldtype": "Float",
+            "label": "Item Total With Tax",
+            "insert_after": "amount",
+            "read_only": 1,
+            "in_list_view": 1,
+            "module": "Kenz Trading"
+        },
+        {
+            "doctype": "Custom Field",
+            "dt": "Sales Order Item",
+            "fieldname": "custom_item_total_with_tax",
+            "fieldtype": "Float",
+            "label": "Item Total With Tax",
+            "insert_after": "amount",
+            "read_only": 1,
+            "in_list_view": 1,
+            "module": "Kenz Trading"
         }
     ]
 
