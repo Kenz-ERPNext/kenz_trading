@@ -65,9 +65,12 @@ frappe.ui.form.on("Sales Order", {
         frm.set_df_property('project', 'hidden', 0);
     },
     refresh: function(frm) {
-        
+
         // Always show project field regardless of POS mode
         frm.set_df_property('project', 'hidden', 0);
+
+        // Customize item field to show all items
+        customize_so_item_field(frm);
     },
     // customer: function (frm) {
     //     frm.set_value("custom_session_user", frappe.session.user);
@@ -424,6 +427,9 @@ frappe.ui.form.on("Sales Order", {
     onload_post_render(frm) {
         apply_items_table_height(frm);
     },
+    items_on_form_rendered(frm) {
+        customize_so_item_field(frm);
+    },
     items_add(frm, cdt, cdn) {
         apply_items_table_height(frm);
     },
@@ -499,6 +505,21 @@ frappe.ui.form.on("Sales Order Item", {
         let row = locals[cdt][cdn];
         if (!row.item_code) return;
 
+        // Duplicate item check
+        let count = 0;
+        frm.doc.items.forEach(function(d) {
+            if (d.item_code === row.item_code) {
+                count++;
+            }
+        });
+        if (count > 1) {
+            frappe.msgprint({
+                title: __('Duplicate Item'),
+                message: __('This item is already added in the Sales Order!'),
+                indicator: 'orange'
+            });
+        }
+
         // ✅ WAIT for ERPNext default item fetch
         setTimeout(() => {
 
@@ -535,6 +556,16 @@ frappe.ui.form.on("Sales Order Item", {
                         "custom_rack_number",
                         r.message.custom_rack_number || ""
                     );
+
+                    // Set item tax template from Item master
+                    if (r.message.item_tax_template) {
+                        frappe.model.set_value(
+                            cdt,
+                            cdn,
+                            "item_tax_template",
+                            r.message.item_tax_template
+                        );
+                    }
                 }
             });
 
@@ -1358,4 +1389,67 @@ function calculate_item_tax_total(frm, cdt, cdn) {
     let total_with_tax = base_amount + tax_amount;
 
     frappe.model.set_value(cdt, cdn, "custom_item_total_with_tax", total_with_tax);
+}
+
+
+// =============================================
+// SALES ORDER ITEM SEARCH - Show All Items
+// =============================================
+
+function customize_so_item_field(frm) {
+    setTimeout(() => {
+        let items_grid = frm.fields_dict.items.grid;
+        if (items_grid) {
+            let item_field = items_grid.get_field('item_code');
+
+            if (item_field) {
+                item_field.get_query = function(doc, cdt, cdn) {
+                    return {
+                        query: "kenz_trading.events.sales_invoice.get_all_sales_items_for_link_field",
+                        page_len: 1000
+                    };
+                };
+
+                if (item_field.df) {
+                    item_field.df.page_len = 1000;
+                }
+            }
+
+            if (items_grid.grid_form && items_grid.grid_form.fields_dict.item_code) {
+                items_grid.grid_form.fields_dict.item_code.get_query = function(doc, cdt, cdn) {
+                    return {
+                        query: "kenz_trading.events.sales_invoice.get_all_sales_items_for_link_field",
+                        page_len: 1000
+                    };
+                };
+            }
+        }
+    }, 1000);
+
+    setTimeout(() => {
+        if (frm.fields_dict.items && frm.fields_dict.items.grid) {
+            let original_add_new_row = frm.fields_dict.items.grid.add_new_row;
+            frm.fields_dict.items.grid.add_new_row = function(idx, callback, show) {
+                let result = original_add_new_row.call(this, idx, callback, show);
+
+                setTimeout(() => {
+                    let item_field = this.get_field('item_code');
+                    if (item_field) {
+                        item_field.get_query = function(doc, cdt, cdn) {
+                            return {
+                                query: "kenz_trading.events.sales_invoice.get_all_sales_items_for_link_field",
+                                page_len: 1000
+                            };
+                        };
+
+                        if (item_field.df) {
+                            item_field.df.page_len = 1000;
+                        }
+                    }
+                }, 500);
+
+                return result;
+            };
+        }
+    }, 1500);
 }

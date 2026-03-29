@@ -46,11 +46,19 @@ app_license = "mit"
 doctype_js = {
     "Sales Invoice" : "public/js/sales_invoice.js",
     "Purchase Invoice" : "public/js/purchase_invoice.js",
+    "Purchase Order" : "public/js/purchase_order.js",
     "Item" : "public/js/item.js",
     "Quotation" : "public/js/quotation.js",
     "Customer" :"public/js/customer.js",
     "Item Price" : "public/js/item_price.js",
     "Sales Order" : "public/js/sales_order.js"
+}
+
+doctype_css = {
+    "Sales Invoice": "public/css/sales_invoice.css",
+    "Sales Order": "public/css/sales_invoice.css",
+    "Purchase Invoice": "public/css/sales_invoice.css",
+    "Purchase Order": "public/css/sales_invoice.css"
 }
 
  
@@ -209,9 +217,9 @@ doc_events = {
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "kenz_trading.event.get_events"
-# }
+override_whitelisted_methods = {
+    "erpnext.controllers.queries.item_query": "kenz_trading.events.sales_invoice.get_all_sales_items_for_link_field"
+}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
