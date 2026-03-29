@@ -69,6 +69,11 @@ frappe.ui.form.on("Sales Order", {
         // Always show project field regardless of POS mode
         frm.set_df_property('project', 'hidden', 0);
 
+        // Hide Tax Category, Shipping Rule, Incoterm
+        frm.set_df_property('tax_category', 'hidden', 1);
+        frm.set_df_property('shipping_rule', 'hidden', 1);
+        frm.set_df_property('incoterm', 'hidden', 1);
+
         // Customize item field to show all items
         customize_so_item_field(frm);
     },
