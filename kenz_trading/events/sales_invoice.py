@@ -49,76 +49,6 @@ def on_submits(doc, method):
             })
 
             iv.save(ignore_permissions=True)
- 
-    # ✅ Payment Entry section (independent)
-    if not frappe.db.get_single_value("Kenza Settings", "auto_create_payment"):
-        return
-
-    if doc.is_return:
-        return
-
-    if not doc.custom_mode_of_payment:
-        return    
-
-    paid_to_account = frappe.db.get_value(
-        "Mode of Payment Account",
-        {
-            "parent": doc.custom_mode_of_payment,   # Mode of Payment
-            "company": doc.company
-        },
-        "default_account"
-    )
-
-    if not paid_to_account:
-        frappe.throw(
-            f"Default Account not set for Mode of Payment <b>{doc.custom_mode_of_payment}</b>"
-        )
-
-    paid_from_account = frappe.db.get_value(
-        "Company",
-        doc.company,
-        "default_receivable_account"
-    )
-
-    if not paid_from_account:
-        frappe.throw(
-            f"Default Receivable Account not set for Company <b>{doc.company}</b>"
-        )
-
-    pe = frappe.new_doc("Payment Entry")
-    pe.payment_type = "Receive"
-    pe.posting_date = doc.posting_date
-    pe.mode_of_payment = doc.custom_mode_of_payment
-    pe.party_type = "Customer"
-    pe.party = doc.customer
-    pe.paid_to = paid_to_account
-    pe.paid_to_account_currency = doc.currency
-    pe.paid_from = paid_from_account
-    pe.paid_from_account_currency = doc.currency
-    pe.paid_amount = doc.outstanding_amount
-    pe.received_amount = doc.outstanding_amount
-    pe.source_exchange_rate = 1
-    pe.target_exchange_rate = 1
-
-    if doc.custom_mode_of_payment == "Cheque":
-        pe.reference_no = doc.custom_cheque_number
-        pe.reference_date = doc.custom_cheque_date
-    else:
-        pe.reference_no = doc.name
-        pe.reference_date = doc.posting_date
-
-    pe.append("references", {
-        "reference_doctype": "Sales Invoice",
-        "reference_name": doc.name,
-        "total_amount": doc.grand_total,
-        "outstanding_amount": doc.outstanding_amount,
-        "allocated_amount": doc.outstanding_amount
-    })
-
-    pe.insert()
-    pe.submit()
-
-    frappe.msgprint(f"Payment Entry <b>{pe.name}</b> created successfully", indicator="green")
 
 
    
@@ -711,5 +641,4 @@ def item_query_by_branch(doctype, txt, searchfield, start, page_len, filters):
 #         "start": start,
 #         "page_len": page_len
 #     })
-
 
