@@ -53,7 +53,9 @@
   "show_last_5_sales_and_purchase_transactions",
   "show_sale_search_window",
   "show_purchase_search_window",
-  "show_item_qty_search_window"
+  "show_item_qty_search_window",
+  "section_break_kplg",
+  "clear_tin_in_customer"
  ],
  "fields": [
   {
@@ -326,14 +328,23 @@
    "fieldname": "last_invoice",
    "fieldtype": "Check",
    "label": "Last Invoice Item Rate Validation"
+  },
+  {
+   "fieldname": "section_break_kplg",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "clear_tin_in_customer",
+   "fieldtype": "Button",
+   "label": "TIN"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-03-23 13:06:03.883941",
- "modified_by": "Administrator",
+ "modified": "2026-03-30 12:17:06.043245",
+ "modified_by": "admin@gmail.com",
  "module": "Kenz Trading",
  "name": "Kenza Settings",
  "owner": "Administrator",
