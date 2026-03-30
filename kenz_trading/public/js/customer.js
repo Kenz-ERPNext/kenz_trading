@@ -1,26 +1,3 @@
-// frappe.ui.form.on("Customer", {
-//     custom_vat_registration_number: function (frm) {
-//         if (frm.doc.custom_vat_registration_number) {
-//             frm.set_value(
-//                 "tax_id",
-//                 frm.doc.custom_vat_registration_number
-//             );
-//         }
-//     },
-
-//     refresh: function (frm) {
-//         // Optional: sync on load as well
-//         if (
-//             frm.doc.custom_vat_registration_number &&
-//             !frm.doc.tax_id
-//         ) {
-//             frm.set_value(
-//                 "tax_id",
-//                 frm.doc.custom_vat_registration_number
-//             );
-//         }
-//     }
-// });
 
 
 frappe.ui.form.on("Customer", {
