@@ -180,6 +180,7 @@ doc_events = {
     },
 
     "Sales Invoice":{
+        "before_validate": "kenz_trading.events.sales_invoice.apply_payment_mode_rules",
         "on_submit":"kenz_trading.events.sales_invoice.on_submits",
         "validate": "kenz_trading.events.sales_invoice.validate_item_branch",
         "has_permission": "kenz_trading.events.item.item_has_permission"

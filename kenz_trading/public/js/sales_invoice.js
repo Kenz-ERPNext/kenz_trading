@@ -8,6 +8,13 @@ frappe.ui.form.on("Sales Invoice", {
 
  
     before_save: async function(frm) {
+        // Keep payments aligned with Payment Mode selection
+        if (frm.doc.custom_payment_mode === "Cash") {
+            sync_cash_payment(frm);
+        } else if (frm.doc.custom_payment_mode === "Credit") {
+            clear_pos_payments(frm);
+        }
+
         // ----------------------------
         // Minimum / Maximum Rate Validation
         // ----------------------------
@@ -450,9 +457,27 @@ frappe.ui.form.on("Sales Invoice", {
 function set_pos_value(frm) {
     if (frm.doc.custom_payment_mode === "Credit") {
         frm.set_value("is_pos", 0);
-    } else {
+        clear_pos_payments(frm);
+    } else if (frm.doc.custom_payment_mode === "Cash") {
         frm.set_value("is_pos", 1);
+        sync_cash_payment(frm);
     }
+}
+
+function sync_cash_payment(frm) {
+    const mop = frm.doc.custom_mode_of_payment || "Cash";
+    const amount = frm.doc.rounded_total || frm.doc.grand_total || 0;
+
+    frm.clear_table("payments");
+    const row = frm.add_child("payments");
+    row.mode_of_payment = mop;
+    row.amount = amount;
+    frm.refresh_field("payments");
+}
+
+function clear_pos_payments(frm) {
+    frm.clear_table("payments");
+    frm.refresh_field("payments");
 }
 
 function default_branch(frm) {
@@ -908,6 +933,11 @@ async function build_stock_table(frm, row) {
 
 
 // SALES CODE/////
+
+// Helper stubs to avoid runtime errors and align item query by branch
+function apply_items_table_height(frm) {
+    // Placeholder for layout adjustments (no-op)
+}
 
 
 function show_last_sales_dialog(frm) {
@@ -1594,4 +1624,3 @@ function customize_sales_invoice_item_field(frm) {
         }
     }, 1500);
 }
-

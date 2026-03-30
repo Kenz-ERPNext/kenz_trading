@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import getdate, nowtime
+from frappe.utils import getdate, nowtime, flt
 from frappe import _
 from num2words import num2words
 
@@ -14,6 +14,64 @@ def get_uoms(item_code):
     uoms = frappe.get_all("UOM Conversion Detail", filters={"parent": item_code}, fields=["uom", "conversion_factor"])
     return uoms
 
+
+def apply_payment_mode_rules(doc, method=None):
+    """
+    Keep Sales Invoice payment behaviour aligned with the custom Payment Mode field.
+
+    - Cash  -> POS style invoice with a single payment row covering the full total
+              so the invoice submits as Paid.
+    - Credit -> Normal credit invoice with no payments so it stays Unpaid.
+    """
+
+    # Skip credit-note scenarios
+    if doc.is_return:
+        return
+
+    # Nothing to do if the custom field is empty
+    if not getattr(doc, "custom_payment_mode", None):
+        return
+
+    if doc.custom_payment_mode == "Cash":
+        doc.is_pos = 1
+
+        # Require a valid Mode of Payment to map the payment to an account
+        mode_of_payment = doc.get("custom_mode_of_payment") or "Cash"
+        if not frappe.db.exists("Mode of Payment", mode_of_payment):
+            frappe.throw(_("Please select a valid Mode of Payment for cash invoices."))
+
+        # Resolve default account for this Mode of Payment + Company
+        paid_account = None
+        if doc.company:
+            paid_account = frappe.db.get_value(
+                "Mode of Payment Account",
+                {"parent": mode_of_payment, "company": doc.company},
+                "default_account",
+            )
+
+        if not paid_account:
+            frappe.throw(
+                _(
+                    "Default Account is required for Mode of Payment {0} in Company {1}."
+                ).format(mode_of_payment, doc.company or "")
+            )
+
+        # Align payments table with the invoice total
+        payable_amount = flt(doc.rounded_total or doc.grand_total or 0)
+        doc.set("payments", [])
+        doc.append(
+            "payments",
+            {
+                "mode_of_payment": mode_of_payment,
+                "amount": payable_amount,
+                "account": paid_account,
+            },
+        )
+
+    elif doc.custom_payment_mode == "Credit":
+        # Credit invoices should behave like standard credit sales
+        doc.is_pos = 0
+        doc.set("payments", [])
 
 
 
@@ -641,4 +699,3 @@ def item_query_by_branch(doctype, txt, searchfield, start, page_len, filters):
 #         "start": start,
 #         "page_len": page_len
 #     })
-

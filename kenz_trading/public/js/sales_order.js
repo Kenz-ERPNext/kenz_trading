@@ -1458,3 +1458,22 @@ function customize_so_item_field(frm) {
         }
     }, 1500);
 }
+
+// -------------------------------------------------------------------
+// Helper stubs to avoid runtime errors and align item query by branch
+// -------------------------------------------------------------------
+function set_item_query(frm) {
+    frm.fields_dict["items"].grid.get_field("item_code").get_query = function (doc, cdt, cdn) {
+        if (!frm.doc.branch) {
+            return {};
+        }
+        return {
+            query: "kenz_trading.events.sales_order.item_query_by_branch",
+            filters: { branch: frm.doc.branch }
+        };
+    };
+}
+
+function apply_items_table_height(frm) {
+    // Placeholder for layout adjustments (left as no-op to prevent console errors)
+}
