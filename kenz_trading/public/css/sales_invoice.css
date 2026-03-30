@@ -1,0 +1,123 @@
+/* Stock info visual indicators */
+.stock-info {
+    font-size: 0.85em;
+    margin-top: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    background-color: #f8f9fa;
+}
+
+.stock-info.low-stock {
+    background-color: #fff3cd;
+    border-left: 3px solid #ffc107;
+}
+
+.stock-info.out-of-stock {
+    background-color: #f8d7da;
+    border-left: 3px solid #dc3545;
+}
+
+.stock-info.in-stock {
+    background-color: #d1ecf1;
+    border-left: 3px solid #17a2b8;
+}
+
+/* Item Browser Styling */
+#item-browser {
+    background: white;
+    border: 1px solid #d1d8dd !important;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    max-height: 200px !important;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.item-row {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s ease;
+}
+
+.item-row:hover {
+    background-color: #f8f9fa;
+}
+
+.item-row.highlighted {
+    background-color: #2196f3 !important;
+    color: white !important;
+    border-left: 4px solid #1976d2;
+    box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+}
+
+.item-row.highlighted .item-code {
+    color: white !important;
+    font-weight: bold;
+}
+
+.item-row.highlighted .item-name {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.item-row.highlighted .item-rate {
+    color: white !important;
+    font-weight: bold;
+}
+
+.item-row:last-child {
+    border-bottom: none;
+}
+
+.item-row .item-code {
+    font-weight: bold;
+    color: #333;
+    font-size: 13px;
+}
+
+.item-row .item-name {
+    font-size: 12px;
+    color: #666;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 250px;
+}
+
+.item-row .item-rate {
+    text-align: right;
+    color: #2ecc71;
+    font-weight: bold;
+    font-size: 13px;
+    min-width: 80px;
+}
+
+/* Scrollbar styling for item browser */
+#item-browser::-webkit-scrollbar {
+    width: 6px;
+}
+
+#item-browser::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#item-browser::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+#item-browser::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .item-row .item-name {
+        max-width: 150px;
+    }
+}

@@ -460,6 +460,218 @@ def validate_item_branch(doc, method):
 
 
 @frappe.whitelist()
+def get_item_details_for_sales_invoice(item_code, customer=None, company=None, currency=None):
+    """
+    Get item details including pricing information for sales invoice
+    """
+    if not item_code:
+        return {}
+
+    item_code = str(item_code).strip()
+    if not item_code or len(item_code) < 2:
+        return {}
+
+    try:
+        if not frappe.db.exists("Item", item_code):
+            return {}
+
+        item = frappe.get_doc("Item", item_code)
+        if not item or not item.is_sales_item:
+            return {}
+
+        result = {
+            "item_code": item.item_code,
+            "item_name": item.item_name,
+            "description": item.description,
+            "stock_uom": item.stock_uom,
+            "is_stock_item": item.is_stock_item,
+            "standard_rate": item.standard_rate or 0,
+            "item_group": item.item_group,
+            "brand": item.brand,
+        }
+
+        if company:
+            try:
+                company_doc = frappe.get_doc("Company", company)
+                if company_doc.default_income_account:
+                    result["income_account"] = company_doc.default_income_account
+            except Exception as e:
+                frappe.log_error(f"Error getting company default income account: {str(e)}")
+
+        if customer and company:
+            try:
+                customer_doc = frappe.get_doc("Customer", customer)
+                price_list = customer_doc.default_price_list
+
+                if not price_list:
+                    company_doc = frappe.get_doc("Company", company)
+                    price_list = company_doc.default_selling_price_list
+
+                if not price_list:
+                    selling_settings = frappe.get_single("Selling Settings")
+                    if selling_settings and selling_settings.selling_price_list:
+                        price_list = selling_settings.selling_price_list
+
+                if price_list:
+                    item_price = frappe.db.get_value(
+                        "Item Price",
+                        {"item_code": item_code, "price_list": price_list, "selling": 1},
+                        "price_list_rate",
+                    )
+
+                    if item_price:
+                        result["rate"] = item_price
+                        result["price_list"] = price_list
+                        result["price_list_rate"] = item_price
+                    else:
+                        result["rate"] = item.standard_rate or 0
+                else:
+                    result["rate"] = item.standard_rate or 0
+            except Exception as e:
+                frappe.log_error(f"Error getting pricing details: {str(e)}")
+                result["rate"] = item.standard_rate or 0
+        else:
+            result["rate"] = item.standard_rate or 0
+
+        if item.is_stock_item and company:
+            try:
+                from erpnext.stock.utils import get_stock_balance
+
+                stock_qty = get_stock_balance(item_code, company=company)
+                result["stock_qty"] = stock_qty
+            except Exception as e:
+                frappe.log_error(f"Error getting stock quantity: {str(e)}")
+                result["stock_qty"] = 0
+
+        return result
+
+    except Exception as e:
+        frappe.log_error(f"Error in get_item_details_for_sales_invoice: {str(e)}")
+        return {}
+
+
+@frappe.whitelist()
+def get_all_sales_items(use_cache=True):
+    """
+    Get ALL sales items for dropdown - comprehensive list without pagination.
+    Implements caching for performance optimization.
+    """
+    cache_key = "all_sales_items_for_invoice"
+
+    if use_cache:
+        cached_items = frappe.cache().get_value(cache_key)
+        if cached_items:
+            return cached_items
+
+    try:
+        query = """
+            SELECT
+                item_code,
+                item_name,
+                COALESCE(standard_rate, 0) as standard_rate,
+                stock_uom,
+                item_group,
+                brand,
+                modified
+            FROM `tabItem`
+            WHERE is_sales_item = 1
+            AND disabled = 0
+            ORDER BY item_code ASC
+        """
+
+        all_items = frappe.db.sql(query, as_dict=True)
+
+        if use_cache and all_items:
+            frappe.cache().set_value(cache_key, all_items, expires_in_sec=1800)
+
+        return all_items
+
+    except Exception as e:
+        frappe.log_error(f"Error getting all sales items: {str(e)}")
+        return []
+
+
+@frappe.whitelist()
+def clear_items_cache():
+    """Clear the cached items list"""
+    cache_key = "all_sales_items_for_invoice"
+    frappe.cache().delete_value(cache_key)
+    return {"status": "success", "message": "Items cache cleared"}
+
+
+@frappe.whitelist()
+def get_all_sales_items_for_link_field(doctype, txt, searchfield, start, page_len, filters):
+    """
+    Custom query function for Link fields to show all sales items.
+    Replaces the default item query to show comprehensive list.
+    """
+    try:
+        all_items = get_all_sales_items(use_cache=True)
+
+        results = []
+
+        if txt:
+            txt_lower = txt.lower()
+            filtered_items = []
+            for item in all_items:
+                item_code = item.get("item_code", "").lower()
+                item_name = item.get("item_name", "").lower()
+
+                if item_code == txt_lower or item_name == txt_lower:
+                    filtered_items.insert(0, item)
+                elif item_code.startswith(txt_lower) or item_name.startswith(txt_lower):
+                    filtered_items.append(item)
+                elif txt_lower in item_code or txt_lower in item_name:
+                    filtered_items.append(item)
+            all_items = filtered_items
+
+        for item in all_items:
+            results.append(
+                [
+                    item.get("item_code", ""),
+                    item.get("item_name", ""),
+                    item.get("item_group", ""),
+                    item.get("brand", ""),
+                    item.get("stock_uom", ""),
+                    item.get("standard_rate", 0),
+                ]
+            )
+
+        return results
+
+    except Exception as e:
+        frappe.log_error(f"Error in get_all_sales_items_for_link_field: {str(e)}")
+
+        try:
+            from erpnext.controllers.queries import item_query
+
+            return item_query(doctype, txt, searchfield, start, page_len, filters)
+        except ImportError:
+            conditions = ["is_sales_item = 1", "disabled = 0"]
+            if txt:
+                conditions.append(
+                    f"({searchfield} like %(txt)s OR item_name like %(txt)s)"
+                )
+
+            query = f"""
+                SELECT item_code, item_name, item_group, brand, stock_uom, standard_rate
+                FROM `tabItem`
+                WHERE {' AND '.join(conditions)}
+                ORDER BY item_code
+                LIMIT %(start)s, %(page_len)s
+            """
+
+            return frappe.db.sql(
+                query,
+                {
+                    "txt": f"%{txt}%" if txt else "",
+                    "start": int(start) if start else 0,
+                    "page_len": int(page_len) if page_len else 20,
+                },
+            )
+
+
+@frappe.whitelist()
 def item_query_by_branch(doctype, txt, searchfield, start, page_len, filters):
     branch = filters.get("branch")
 
