@@ -217,9 +217,9 @@ doc_events = {
 # Overriding Methods
 # ------------------------------
 #
-override_whitelisted_methods = {
-    "erpnext.controllers.queries.item_query": "kenz_trading.events.sales_invoice.get_all_sales_items_for_link_field"
-}
+# override_whitelisted_methods = {
+#     "erpnext.controllers.queries.item_query": "kenz_trading.events.sales_invoice.get_all_sales_items_for_link_field"
+# }
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
