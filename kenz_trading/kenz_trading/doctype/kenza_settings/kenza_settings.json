@@ -6,10 +6,9 @@
  "engine": "InnoDB",
  "field_order": [
   "user_default_branch",
-  "item_section",
-  "default_item_code",
-  "item_code_series",
-  "column_break_bmel",
+  "section_break_bbjp",
+  "enable_bulk_edit",
+  "sales_invoice_tab",
   "sales_invoice_section",
   "activate_item_variant_save",
   "show_item_variant_table",
@@ -22,8 +21,6 @@
   "purchase_search_window",
   "item_qty_search_window",
   "auto_create_payment",
-  "section_break_bbjp",
-  "enable_bulk_edit",
   "section_break_bkws",
   "restricted_users",
   "section_break_tdir",
@@ -42,8 +39,8 @@
   "create_tax_template",
   "sales_taxes_and_charges_template",
   "default_item_tax_template",
-  "quotation_section",
-  "enable_create_sales_invoice",
+  "auto_create_delivery_note_section",
+  "enable_auto_create_dn",
   "sales_order_tab",
   "show_item_variant_tables",
   "minimum_and_maximum_rate_validations",
@@ -54,8 +51,14 @@
   "show_sale_search_window",
   "show_purchase_search_window",
   "show_item_qty_search_window",
-  "section_break_kplg",
-  "clear_tin_in_customer"
+  "item_tab",
+  "item_section",
+  "default_item_code",
+  "item_code_series",
+  "column_break_bmel",
+  "quotation_tab",
+  "quotation_section",
+  "enable_create_sales_invoice"
  ],
  "fields": [
   {
@@ -195,16 +198,18 @@
    "fieldname": "tax_category",
    "fieldtype": "Link",
    "label": "Tax Category",
-   "options": "Tax Category"
+   "options": "Tax Category",
+   "read_only": 1
   },
   {
    "fieldname": "sales_taxes_and_charges_template",
    "fieldtype": "Link",
    "label": "Sales Taxes and Charges Template",
-   "options": "Sales Taxes and Charges Template"
+   "options": "Sales Taxes and Charges Template",
+   "read_only": 1
   },
   {
-   "depends_on": "eval:doc.create_tax_category_and_template",
+   "depends_on": "eval:doc.create_tax_category_and_template || frm.doc.parent_account",
    "fieldname": "create_template__account_head",
    "fieldtype": "Button",
    "label": "Create Template  Account Head"
@@ -213,7 +218,8 @@
    "fieldname": "account",
    "fieldtype": "Link",
    "label": "Account",
-   "options": "Account"
+   "options": "Account",
+   "read_only": 1
   },
   {
    "depends_on": "eval:doc.create_tax_category_and_template",
@@ -330,20 +336,37 @@
    "label": "Last Invoice Item Rate Validation"
   },
   {
-   "fieldname": "section_break_kplg",
-   "fieldtype": "Section Break"
+   "fieldname": "sales_invoice_tab",
+   "fieldtype": "Tab Break",
+   "label": "Sales Invoice"
   },
   {
-   "fieldname": "clear_tin_in_customer",
-   "fieldtype": "Button",
-   "label": "TIN"
+   "fieldname": "item_tab",
+   "fieldtype": "Tab Break",
+   "label": "Item"
+  },
+  {
+   "fieldname": "quotation_tab",
+   "fieldtype": "Tab Break",
+   "label": "Quotation"
+  },
+  {
+   "fieldname": "auto_create_delivery_note_section",
+   "fieldtype": "Section Break",
+   "label": "Auto Create Delivery Note"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_auto_create_dn",
+   "fieldtype": "Check",
+   "label": "Enable Auto Create DN"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-03-30 12:17:06.043245",
+ "modified": "2026-03-30 14:24:02.383228",
  "modified_by": "admin@gmail.com",
  "module": "Kenz Trading",
  "name": "Kenza Settings",

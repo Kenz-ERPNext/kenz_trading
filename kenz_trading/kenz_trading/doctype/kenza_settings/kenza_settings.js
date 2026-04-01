@@ -53,28 +53,28 @@ frappe.ui.form.on("Kenza Settings", {
            
     },
 
-    clear_tin_in_customer: function(frm) {
+    // clear_tin_in_customer: function(frm) {
 
-        frappe.confirm(
-            "Are you sure you want to CLEAR TIN values from all Customers?",
-            function() {
+    //     frappe.confirm(
+    //         "Are you sure you want to CLEAR TIN values from all Customers?",
+    //         function() {
 
-                cur_frm.call({
-                    doc: cur_frm.doc,
-                    method: "tin_clear",
-                    args: {},
-                    freeze: true,
-                    freeze_message: "Clearing TIN values...",
+    //             cur_frm.call({
+    //                 doc: cur_frm.doc,
+    //                 method: "tin_clear",
+    //                 args: {},
+    //                 freeze: true,
+    //                 freeze_message: "Clearing TIN values...",
 
-                    callback: function(r) {
-                        if (r.message) {
-                            frappe.msgprint("✅ TIN Values Cleared Successfully");
-                        }
-                    }
-                });
+    //                 callback: function(r) {
+    //                     if (r.message) {
+    //                         frappe.msgprint("✅ TIN Values Cleared Successfully");
+    //                     }
+    //                 }
+    //             });
 
-            }
-        );
+    //         }
+    //     );
 
-    }
+    // }
 }); 
