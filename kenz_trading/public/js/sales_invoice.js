@@ -223,6 +223,20 @@ frappe.ui.form.on("Sales Invoice", {
             }
         });
 
+        frappe.call({
+            method: "frappe.client.get_single_value",
+            args: {
+                doctype: "Kenza Settings",
+                field: "enable_auto_create_dn"
+            },
+            callback: function(r) {
+                if (r.message) {
+                    frm.set_df_property("update_stock", "read_only", 1);
+                    frm.set_value("update_stock", 0);
+                }
+            }
+        });
+
 
 
         // frappe.db.get_single_value('Kenza Settings', 'sale_search_window').then(value => {

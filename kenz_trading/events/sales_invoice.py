@@ -15,10 +15,88 @@ def get_uoms(item_code):
     return uoms
 
 
-
+ 
 
 @frappe.whitelist()
 def on_submits(doc, method):
+
+
+    # # =====================================================
+    # # ✅ DELIVERY NOTE AUTO CREATE (NEW)
+    # # =====================================================
+    if frappe.db.get_single_value("Kenza Settings", "enable_auto_create_dn"):
+
+        if frappe.db.exists("Delivery Note Item", {"against_sales_invoice": doc.name}):
+            return
+
+        available_items = []
+        pending_items = []
+
+        for item in doc.items:
+            if not item.item_code or not item.warehouse:
+                continue
+
+            available_qty = frappe.db.get_value(
+                "Bin",
+                {"item_code": item.item_code, "warehouse": item.warehouse},
+                "actual_qty"
+            ) or 0
+
+            available_qty = float(available_qty)
+
+            if available_qty >= item.qty:
+                available_items.append((item, item.qty))
+
+            elif available_qty > 0:
+                available_items.append((item, available_qty))
+                pending_items.append((item, item.qty - available_qty))
+
+            else:
+                pending_items.append((item, item.qty))
+
+        if available_items:
+            dn = frappe.new_doc("Delivery Note")
+            dn.customer = doc.customer
+            dn.company = doc.company
+            dn.posting_date = doc.posting_date
+
+            for item, qty in available_items:
+                dn.append("items", {
+                    "item_code": item.item_code,
+                    "qty": qty,
+                    "rate": item.rate,
+                    "warehouse": item.warehouse,
+                    "against_sales_invoice": doc.name,
+                    "si_detail": item.name
+                })
+
+            dn.insert(ignore_permissions=True)
+            dn.submit()
+
+        if pending_items:
+            dn = frappe.new_doc("Delivery Note")
+            dn.customer = doc.customer
+            dn.company = doc.company
+            dn.posting_date = doc.posting_date
+
+            for item, qty in pending_items:
+                dn.append("items", {
+                    "item_code": item.item_code,
+                    "qty": qty,
+                    "rate": item.rate,
+                    "warehouse": item.warehouse,
+                    "against_sales_invoice": doc.name,
+                    "si_detail": item.name
+                })
+
+            dn.insert(ignore_permissions=True)
+        frappe.msgprint("Delivery Note Created")
+
+
+
+
+
+
     # ✅ Item Variants section
     if frappe.db.get_single_value("Kenza Settings", "activate_item_variant_save"):
         for row in doc.items:
@@ -119,6 +197,12 @@ def on_submits(doc, method):
     pe.submit()
 
     frappe.msgprint(f"Payment Entry <b>{pe.name}</b> created successfully", indicator="green")
+
+
+    value = frappe.db.get_single_value("Kenza Settings", "enable_auto_create_dn")
+    frappe.msgprint(f"DN Setting Value: {value}")
+
+
 
 
    
@@ -440,6 +524,12 @@ def get_items_by_branch(doctype, txt, searchfield, start, page_len, filters):
 @frappe.whitelist()
 def validate_item_branch(doc, method):
     pass
+
+    # value = frappe.db.get_single_value("Kenza Settings", "enable_auto_create_dn")
+    # frappe.msgprint(f"DN Setting Value: {value}")
+
+
+    # pass
 #     user_branch = frappe.defaults.get_user_default("Branch")
 
 #     for row in doc.items:

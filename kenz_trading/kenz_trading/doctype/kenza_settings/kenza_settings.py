@@ -82,43 +82,43 @@ class KenzaSettings(Document):
 
 
 	
-	@frappe.whitelist()
-	def tin_clear(self):
-		customers = frappe.get_all("Customer", pluck="name")
+	# @frappe.whitelist()
+	# def tin_clear(self):
+	# 	customers = frappe.get_all("Customer", pluck="name")
 
-		total_customers = len(customers)
-		updated_customers = 0
-		cleared_rows = 0
+	# 	total_customers = len(customers)
+	# 	updated_customers = 0
+	# 	cleared_rows = 0
 
-		for cust_name in customers:
-			doc = frappe.get_doc("Customer", cust_name)
+	# 	for cust_name in customers:
+	# 		doc = frappe.get_doc("Customer", cust_name)
 
-			if not doc.custom_additional_ids:
-				continue
+	# 		if not doc.custom_additional_ids:
+	# 			continue
 
-			updated = False
+	# 		updated = False
 
-			for row in doc.custom_additional_ids:
-				if (
-					row.type_name == "Tax Identification Number"
-					and row.type_code == "TIN"
-					and row.value
-				):
-					row.value = ""
-					cleared_rows += 1
-					updated = True
+	# 		for row in doc.custom_additional_ids:
+	# 			if (
+	# 				row.type_name == "Tax Identification Number"
+	# 				and row.type_code == "TIN"
+	# 				and row.value
+	# 			):
+	# 				row.value = ""
+	# 				cleared_rows += 1
+	# 				updated = True
 
-			if updated:
-				doc.save(ignore_permissions=True)
-				updated_customers += 1
+	# 		if updated:
+	# 			doc.save(ignore_permissions=True)
+	# 			updated_customers += 1
 
-		frappe.db.commit()
+	# 	frappe.db.commit()
 
-		return {
-			"total_customers": total_customers,
-			"updated_customers": updated_customers,
-			"cleared_rows": cleared_rows
-		}
+	# 	return {
+	# 		"total_customers": total_customers,
+	# 		"updated_customers": updated_customers,
+	# 		"cleared_rows": cleared_rows
+	# 	}
 
 
 
