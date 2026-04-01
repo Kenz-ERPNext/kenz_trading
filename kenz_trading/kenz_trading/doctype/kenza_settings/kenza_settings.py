@@ -81,7 +81,9 @@ class KenzaSettings(Document):
 		return tt.name
 
 
-	
+	   
+
+	   
 	# @frappe.whitelist()
 	# def tin_clear(self):
 	# 	customers = frappe.get_all("Customer", pluck="name")
