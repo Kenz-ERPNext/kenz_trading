@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import getdate, nowtime
+from frappe.utils import getdate, nowtime, flt
 from frappe import _
 from num2words import num2words
 
@@ -13,6 +13,65 @@ def get_default_branch(user):
 def get_uoms(item_code):
     uoms = frappe.get_all("UOM Conversion Detail", filters={"parent": item_code}, fields=["uom", "conversion_factor"])
     return uoms
+
+
+def apply_payment_mode_rules(doc, method=None):
+    """
+    Keep Sales Invoice payment behaviour aligned with the custom Payment Mode field.
+
+    - Cash  -> POS style invoice with a single payment row covering the full total
+              so the invoice submits as Paid.
+    - Credit -> Normal credit invoice with no payments so it stays Unpaid.
+    """
+
+    # Skip credit-note scenarios
+    if doc.is_return:
+        return
+
+    # Nothing to do if the custom field is empty
+    if not getattr(doc, "custom_payment_mode", None):
+        return
+
+    if doc.custom_payment_mode == "Cash":
+        doc.is_pos = 1
+
+        # Require a valid Mode of Payment to map the payment to an account
+        mode_of_payment = doc.get("custom_mode_of_payment") or "Cash"
+        if not frappe.db.exists("Mode of Payment", mode_of_payment):
+            frappe.throw(_("Please select a valid Mode of Payment for cash invoices."))
+
+        # Resolve default account for this Mode of Payment + Company
+        paid_account = None
+        if doc.company:
+            paid_account = frappe.db.get_value(
+                "Mode of Payment Account",
+                {"parent": mode_of_payment, "company": doc.company},
+                "default_account",
+            )
+
+        if not paid_account:
+            frappe.throw(
+                _(
+                    "Default Account is required for Mode of Payment {0} in Company {1}."
+                ).format(mode_of_payment, doc.company or "")
+            )
+
+        # Align payments table with the invoice total
+        payable_amount = flt(doc.rounded_total or doc.grand_total or 0)
+        doc.set("payments", [])
+        doc.append(
+            "payments",
+            {
+                "mode_of_payment": mode_of_payment,
+                "amount": payable_amount,
+                "account": paid_account,
+            },
+        )
+
+    elif doc.custom_payment_mode == "Credit":
+        # Credit invoices should behave like standard credit sales
+        doc.is_pos = 0
+        doc.set("payments", [])
 
 
  
@@ -127,76 +186,6 @@ def on_submits(doc, method):
             })
 
             iv.save(ignore_permissions=True)
- 
-    # ✅ Payment Entry section (independent)
-    if not frappe.db.get_single_value("Kenza Settings", "auto_create_payment"):
-        return
-
-    if doc.is_return:
-        return
-
-    if not doc.custom_mode_of_payment:
-        return    
-
-    paid_to_account = frappe.db.get_value(
-        "Mode of Payment Account",
-        {
-            "parent": doc.custom_mode_of_payment,   # Mode of Payment
-            "company": doc.company
-        },
-        "default_account"
-    )
-
-    if not paid_to_account:
-        frappe.throw(
-            f"Default Account not set for Mode of Payment <b>{doc.custom_mode_of_payment}</b>"
-        )
-
-    paid_from_account = frappe.db.get_value(
-        "Company",
-        doc.company,
-        "default_receivable_account"
-    )
-
-    if not paid_from_account:
-        frappe.throw(
-            f"Default Receivable Account not set for Company <b>{doc.company}</b>"
-        )
-
-    pe = frappe.new_doc("Payment Entry")
-    pe.payment_type = "Receive"
-    pe.posting_date = doc.posting_date
-    pe.mode_of_payment = doc.custom_mode_of_payment
-    pe.party_type = "Customer"
-    pe.party = doc.customer
-    pe.paid_to = paid_to_account
-    pe.paid_to_account_currency = doc.currency
-    pe.paid_from = paid_from_account
-    pe.paid_from_account_currency = doc.currency
-    pe.paid_amount = doc.outstanding_amount
-    pe.received_amount = doc.outstanding_amount
-    pe.source_exchange_rate = 1
-    pe.target_exchange_rate = 1
-
-    if doc.custom_mode_of_payment == "Cheque":
-        pe.reference_no = doc.custom_cheque_number
-        pe.reference_date = doc.custom_cheque_date
-    else:
-        pe.reference_no = doc.name
-        pe.reference_date = doc.posting_date
-
-    pe.append("references", {
-        "reference_doctype": "Sales Invoice",
-        "reference_name": doc.name,
-        "total_amount": doc.grand_total,
-        "outstanding_amount": doc.outstanding_amount,
-        "allocated_amount": doc.outstanding_amount
-    })
-
-    pe.insert()
-    pe.submit()
-
-    frappe.msgprint(f"Payment Entry <b>{pe.name}</b> created successfully", indicator="green")
 
 
     value = frappe.db.get_single_value("Kenza Settings", "enable_auto_create_dn")
@@ -801,5 +790,3 @@ def item_query_by_branch(doctype, txt, searchfield, start, page_len, filters):
 #         "start": start,
 #         "page_len": page_len
 #     })
-
-
