@@ -728,6 +728,9 @@ frappe.ui.form.on("Sales Invoice Item", {
 
 
 
+
+
+
 function calculate_item_tax_total(frm, cdt, cdn) {
     let row = locals[cdt][cdn];
 
