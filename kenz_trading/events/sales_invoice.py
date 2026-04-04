@@ -189,7 +189,7 @@ def on_submits(doc, method):
 
 
     value = frappe.db.get_single_value("Kenza Settings", "enable_auto_create_dn")
-    frappe.msgprint(f"DN Setting Value: {value}")
+    # frappe.msgprint(f"DN Setting Value: {value}")
 
 
 
