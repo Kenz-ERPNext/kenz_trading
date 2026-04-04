@@ -5,7 +5,7 @@ let item_uoms = {};
 
 frappe.ui.form.on("Sales Order", {
 
-
+ 
  
     before_save: async function(frm) {
         // ----------------------------
@@ -671,6 +671,17 @@ frappe.ui.form.on("Sales Order Item", {
                 frm.refresh_field("items");
             }
         }, 150);
+
+        let rate = flt(row.rate || 0);
+
+        // Fixed 15% tax
+        let tax_percent = 15;
+
+        let tax_amount = (rate * tax_percent) / 100;
+
+        let total_with_tax = rate + tax_amount;
+
+        frappe.model.set_value(cdt, cdn, "custom_item_total_with_tax", total_with_tax);
 
         validate_item_rate(frm, cdt, cdn);
         validate_last_invoice_rate(frm, cdt, cdn);
@@ -1373,25 +1384,45 @@ async function validate_last_invoice_rate(frm, cdt, cdn) {
 
 
 
+// function calculate_item_tax_total(frm, cdt, cdn) {
+//     let row = locals[cdt][cdn];
+
+//     if (!row.item_code) return;
+
+//     let base_amount = flt(row.qty) * flt(row.rate);
+
+//     // get total tax %
+//     let total_tax_percent = 0;
+
+//     (frm.doc.taxes || []).forEach(tax => {
+//         if (tax.rate) {
+//             total_tax_percent += flt(tax.rate);
+//         }
+//     });
+
+//     let tax_amount = (base_amount * total_tax_percent) / 100;
+
+//     let total_with_tax = base_amount + tax_amount;
+
+//     frappe.model.set_value(cdt, cdn, "custom_item_total_with_tax", total_with_tax);
+// }
+
+
+
+
 function calculate_item_tax_total(frm, cdt, cdn) {
     let row = locals[cdt][cdn];
 
     if (!row.item_code) return;
 
-    let base_amount = flt(row.qty) * flt(row.rate);
+    let rate = flt(row.rate || 0);
 
-    // get total tax %
-    let total_tax_percent = 0;
+    // Fixed 15% tax
+    let tax_percent = 15;
 
-    (frm.doc.taxes || []).forEach(tax => {
-        if (tax.rate) {
-            total_tax_percent += flt(tax.rate);
-        }
-    });
+    let tax_amount = (rate * tax_percent) / 100;
 
-    let tax_amount = (base_amount * total_tax_percent) / 100;
-
-    let total_with_tax = base_amount + tax_amount;
+    let total_with_tax = rate + tax_amount;
 
     frappe.model.set_value(cdt, cdn, "custom_item_total_with_tax", total_with_tax);
 }
