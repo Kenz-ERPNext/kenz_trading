@@ -1,7 +1,11 @@
+import json
 import frappe
 from frappe.utils import getdate, nowtime, flt
 from frappe import _
 from num2words import num2words
+
+# Will be set by monkey_patches.apply() to store the original ERPNext item_query
+_original_item_query = None
 
 @frappe.whitelist()
 def get_default_branch(user):
@@ -19,8 +23,7 @@ def apply_payment_mode_rules(doc, method=None):
     """
     Keep Sales Invoice payment behaviour aligned with the custom Payment Mode field.
 
-    - Cash  -> POS style invoice with a single payment row covering the full total
-              so the invoice submits as Paid.
+    - Cash  -> Normal invoice (not POS). A separate Payment Entry is created on submit.
     - Credit -> Normal credit invoice with no payments so it stays Unpaid.
     """
 
@@ -33,40 +36,9 @@ def apply_payment_mode_rules(doc, method=None):
         return
 
     if doc.custom_payment_mode == "Cash":
-        doc.is_pos = 1
-
-        # Require a valid Mode of Payment to map the payment to an account
-        mode_of_payment = doc.get("custom_mode_of_payment") or "Cash"
-        if not frappe.db.exists("Mode of Payment", mode_of_payment):
-            frappe.throw(_("Please select a valid Mode of Payment for cash invoices."))
-
-        # Resolve default account for this Mode of Payment + Company
-        paid_account = None
-        if doc.company:
-            paid_account = frappe.db.get_value(
-                "Mode of Payment Account",
-                {"parent": mode_of_payment, "company": doc.company},
-                "default_account",
-            )
-
-        if not paid_account:
-            frappe.throw(
-                _(
-                    "Default Account is required for Mode of Payment {0} in Company {1}."
-                ).format(mode_of_payment, doc.company or "")
-            )
-
-        # Align payments table with the invoice total
-        payable_amount = flt(doc.rounded_total or doc.grand_total or 0)
+        # Cash invoices are NOT POS - a separate Payment Entry will be created on submit
+        doc.is_pos = 0
         doc.set("payments", [])
-        doc.append(
-            "payments",
-            {
-                "mode_of_payment": mode_of_payment,
-                "amount": payable_amount,
-                "account": paid_account,
-            },
-        )
 
     elif doc.custom_payment_mode == "Credit":
         # Credit invoices should behave like standard credit sales
@@ -75,6 +47,76 @@ def apply_payment_mode_rules(doc, method=None):
 
 
  
+
+def create_payment_entry_for_cash(doc, method=None):
+    """
+    Auto-create a separate Payment Entry for Cash invoices on submit.
+    """
+    if doc.is_return:
+        return
+
+    if not getattr(doc, "custom_payment_mode", None) or doc.custom_payment_mode != "Cash":
+        return
+
+    mode_of_payment = doc.get("custom_mode_of_payment") or "Cash"
+    if not frappe.db.exists("Mode of Payment", mode_of_payment):
+        frappe.throw(_("Please select a valid Mode of Payment for cash invoices."))
+
+    paid_account = None
+    if doc.company:
+        paid_account = frappe.db.get_value(
+            "Mode of Payment Account",
+            {"parent": mode_of_payment, "company": doc.company},
+            "default_account",
+        )
+
+    if not paid_account:
+        frappe.throw(
+            _(
+                "Default Account is required for Mode of Payment {0} in Company {1}."
+            ).format(mode_of_payment, doc.company or "")
+        )
+
+    payable_amount = flt(doc.rounded_total or doc.grand_total or 0)
+
+    if payable_amount <= 0:
+        return
+
+    # Get the debit_to account from the Sales Invoice
+    debit_to = doc.debit_to
+
+    pe = frappe.new_doc("Payment Entry")
+    pe.payment_type = "Receive"
+    pe.party_type = "Customer"
+    pe.party = doc.customer
+    pe.company = doc.company
+    pe.posting_date = doc.posting_date
+    pe.mode_of_payment = mode_of_payment
+    pe.paid_from = debit_to
+    pe.paid_to = paid_account
+    pe.paid_amount = payable_amount
+    pe.received_amount = payable_amount
+    pe.reference_no = doc.name
+    pe.reference_date = doc.posting_date
+
+    pe.append("references", {
+        "reference_doctype": "Sales Invoice",
+        "reference_name": doc.name,
+        "total_amount": doc.grand_total,
+        "outstanding_amount": payable_amount,
+        "allocated_amount": payable_amount,
+    })
+
+    pe.insert(ignore_permissions=True)
+    pe.submit()
+
+    frappe.msgprint(
+        _("Payment Entry {0} created for Cash Invoice {1}").format(
+            frappe.utils.get_link_to_form("Payment Entry", pe.name), doc.name
+        ),
+        alert=True,
+    )
+
 
 @frappe.whitelist()
 def on_submits(doc, method):
@@ -679,75 +721,117 @@ def clear_items_cache():
 
 
 @frappe.whitelist()
+def custom_item_query(doctype, txt, searchfield, start, page_len, filters):
+    """
+    Override of erpnext.controllers.queries.item_query.
+    Routes sales item queries to our custom function that shows ALL items.
+    Falls through to ERPNext default for everything else (Stock Ledger, reports, etc.)
+    """
+    if isinstance(filters, str):
+        filters = json.loads(filters)
+
+    # Only override for sales item contexts (Sales Invoice, Sales Order, Quotation, etc.)
+    if filters and (filters.get("is_sales_item") or filters.get("is_purchase_item")):
+        return get_all_sales_items_for_link_field(doctype, txt, searchfield, start, page_len, filters)
+
+    # Fall through to ERPNext default
+    return _original_item_query(doctype, txt, searchfield, start, page_len, filters)
+
+
+@frappe.whitelist()
 def get_all_sales_items_for_link_field(doctype, txt, searchfield, start, page_len, filters):
     """
-    Custom query function for Link fields to show all sales items.
-    Replaces the default item query to show comprehensive list.
+    Custom query function for Link fields to show all items.
+    Bypasses ERPNext default filters (customer, has_variants, etc.).
+    Items starting with the search text appear first.
     """
-    try:
-        all_items = get_all_sales_items(use_cache=True)
+    if isinstance(filters, str):
+        filters = json.loads(filters)
 
-        results = []
+    start = int(start or 0)
+    # Show all matching items instead of Frappe's default page_length of 10
+    page_len = 999
 
-        if txt:
-            txt_lower = txt.lower()
-            filtered_items = []
-            for item in all_items:
-                item_code = item.get("item_code", "").lower()
-                item_name = item.get("item_name", "").lower()
+    conditions = ["i.disabled = 0"]
 
-                if item_code == txt_lower or item_name == txt_lower:
-                    filtered_items.insert(0, item)
-                elif item_code.startswith(txt_lower) or item_name.startswith(txt_lower):
-                    filtered_items.append(item)
-                elif txt_lower in item_code or txt_lower in item_name:
-                    filtered_items.append(item)
-            all_items = filtered_items
+    # Apply sales/purchase filter based on context
+    if filters and filters.get("is_purchase_item"):
+        conditions.append("i.is_purchase_item = 1")
+    else:
+        conditions.append("i.is_sales_item = 1")
 
-        for item in all_items:
-            results.append(
-                [
-                    item.get("item_code", ""),
-                    item.get("item_name", ""),
-                    item.get("item_group", ""),
-                    item.get("brand", ""),
-                    item.get("stock_uom", ""),
-                    item.get("standard_rate", 0),
-                ]
-            )
+    if txt:
+        conditions.append(
+            "(i.name LIKE %(txt)s OR i.item_name LIKE %(txt)s OR i.item_group LIKE %(txt)s)"
+        )
 
-        return results
+    where_clause = " AND ".join(conditions)
 
-    except Exception as e:
-        frappe.log_error(f"Error in get_all_sales_items_for_link_field: {str(e)}")
+    # Order: exact match first, then starts-with, then contains
+    order_clause = "i.name ASC"
+    if txt:
+        order_clause = """
+            CASE
+                WHEN i.name = %(exact_txt)s OR i.item_name = %(exact_txt)s THEN 0
+                WHEN i.item_name LIKE %(starts_txt)s THEN 1
+                WHEN i.name LIKE %(starts_txt)s THEN 2
+                ELSE 3
+            END,
+            i.item_name ASC
+        """
 
-        try:
-            from erpnext.controllers.queries import item_query
+    query = f"""
+        SELECT
+            i.name AS item_code,
+            i.item_name,
+            i.item_group,
+            i.brand,
+            i.stock_uom,
+            COALESCE(i.standard_rate, 0) AS standard_rate
+        FROM `tabItem` i
+        WHERE {where_clause}
+        ORDER BY {order_clause}
+        LIMIT %(page_len)s OFFSET %(start)s
+    """
 
-            return item_query(doctype, txt, searchfield, start, page_len, filters)
-        except ImportError:
-            conditions = ["is_sales_item = 1", "disabled = 0"]
-            if txt:
-                conditions.append(
-                    f"({searchfield} like %(txt)s OR item_name like %(txt)s)"
-                )
+    params = {
+        "txt": f"%{txt}%" if txt else "%",
+        "exact_txt": txt or "",
+        "starts_txt": f"{txt}%" if txt else "%",
+        "start": start,
+        "page_len": page_len,
+    }
 
-            query = f"""
-                SELECT item_code, item_name, item_group, brand, stock_uom, standard_rate
-                FROM `tabItem`
-                WHERE {' AND '.join(conditions)}
-                ORDER BY item_code
-                LIMIT %(start)s, %(page_len)s
-            """
+    items = frappe.db.sql(query, params, as_dict=True)
 
-            return frappe.db.sql(
-                query,
-                {
-                    "txt": f"%{txt}%" if txt else "",
-                    "start": int(start) if start else 0,
-                    "page_len": int(page_len) if page_len else 20,
-                },
-            )
+    # Get total count for this search
+    count_query = f"""
+        SELECT COUNT(*) as total
+        FROM `tabItem` i
+        WHERE {where_clause}
+    """
+    total = frappe.db.sql(count_query, params, as_dict=True)[0].total
+
+    results = []
+    for item in items:
+        item_name = item.get("item_name", "")
+        item_group = item.get("item_group", "")
+
+        # Mark items whose name starts with the search text
+        display_info = item_group
+        if txt and item_name.lower().startswith(txt.lower()):
+            display_info = f"{item_group} | Total: {total} items found"
+
+        results.append([
+            item.get("item_code", ""),
+            item_name,
+            display_info,
+            item.get("brand", ""),
+            item.get("stock_uom", ""),
+            item.get("standard_rate", 0),
+        ])
+
+    return results
 
 
 @frappe.whitelist()
