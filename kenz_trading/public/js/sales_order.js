@@ -1391,8 +1391,6 @@ async function validate_last_invoice_rate(frm, cdt, cdn) {
 // }
 
 
-
-
 function calculate_item_tax_total(frm, cdt, cdn) {
     let row = locals[cdt][cdn];
 
@@ -1400,15 +1398,54 @@ function calculate_item_tax_total(frm, cdt, cdn) {
 
     let rate = flt(row.rate || 0);
 
-    // Fixed 15% tax
-    let tax_percent = 15;
+    // If no Item Tax Template, skip
+    if (!row.item_tax_template) {
+        frappe.model.set_value(cdt, cdn, "custom_item_total_with_tax", rate);
+        return;
+    }
 
-    let tax_amount = (rate * tax_percent) / 100;
+    // Fetch tax_rate from Item Tax Template child table
+    frappe.call({
+        method: "frappe.client.get",
+        args: {
+            doctype: "Item Tax Template",
+            name: row.item_tax_template
+        },
+        callback: function(r) {
+            if (r.message) {
+                let taxes = r.message.taxes || [];
+                let total_tax_percent = 0;
 
-    let total_with_tax = rate + tax_amount;
+                // Sum all tax rates from child table
+                taxes.forEach(tax => {
+                    total_tax_percent += flt(tax.tax_rate || 0);
+                });
 
-    frappe.model.set_value(cdt, cdn, "custom_item_total_with_tax", total_with_tax);
+                let tax_amount = (rate * total_tax_percent) / 100;
+                let total_with_tax = rate + tax_amount;
+
+                frappe.model.set_value(cdt, cdn, "custom_item_total_with_tax", total_with_tax);
+            }
+        }
+    });
 }
+
+// function calculate_item_tax_total(frm, cdt, cdn) {
+//     let row = locals[cdt][cdn];
+
+//     if (!row.item_code) return;
+
+//     let rate = flt(row.rate || 0);
+
+//     // Fixed 15% tax
+//     let tax_percent = 15;
+
+//     let tax_amount = (rate * tax_percent) / 100;
+
+//     let total_with_tax = rate + tax_amount;
+
+//     frappe.model.set_value(cdt, cdn, "custom_item_total_with_tax", total_with_tax);
+// }
 
 
 // =============================================
