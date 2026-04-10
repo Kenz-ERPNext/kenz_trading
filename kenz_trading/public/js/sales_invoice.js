@@ -8,10 +8,8 @@ frappe.ui.form.on("Sales Invoice", {
 
  
     before_save: async function(frm) {
-        // Keep payments aligned with Payment Mode selection
-        if (frm.doc.custom_payment_mode === "Cash") {
-            sync_cash_payment(frm);
-        } else if (frm.doc.custom_payment_mode === "Credit") {
+        // Clear any POS payments - Cash invoices use separate Payment Entry
+        if (frm.doc.custom_payment_mode === "Cash" || frm.doc.custom_payment_mode === "Credit") {
             clear_pos_payments(frm);
         }
 
@@ -81,8 +79,6 @@ frappe.ui.form.on("Sales Invoice", {
         frm.set_df_property('shipping_rule', 'hidden', 1);
         frm.set_df_property('incoterm', 'hidden', 1);
 
-        // Customize the standard item field to show all items
-        customize_sales_invoice_item_field(frm);
     },
     customer: function (frm) {
         frm.set_value("custom_session_user", frappe.session.user);
@@ -120,7 +116,6 @@ frappe.ui.form.on("Sales Invoice", {
         // Set default warehouse on form load if update_stock is enabled
         set_default_warehouse(frm);
 
-        set_item_query(frm);
     },
 
 
@@ -137,17 +132,7 @@ frappe.ui.form.on("Sales Invoice", {
         // frappe.msgprint("hii")
 
 
-        frm.fields_dict['items'].grid.get_field('item_code').get_query = function () {
-
-            if (!frm.doc.branch) return {};
-
-            return {
-                query: "kenz_trading.events.sales_invoice.item_query_by_branch",
-                filters: {
-                    branch: frm.doc.branch
-                }
-            };
-        };
+        // Item search shows all items via customize_sales_invoice_item_field
 
         frm.set_query("customer", function () {
             return {
@@ -458,7 +443,6 @@ frappe.ui.form.on("Sales Invoice", {
         apply_items_table_height(frm);
     },
     items_on_form_rendered(frm) {
-        customize_sales_invoice_item_field(frm);
     },
     items_add(frm, cdt, cdn) {
         apply_items_table_height(frm);
@@ -469,13 +453,9 @@ frappe.ui.form.on("Sales Invoice", {
 });
 
 function set_pos_value(frm) {
-    if (frm.doc.custom_payment_mode === "Credit") {
-        frm.set_value("is_pos", 0);
-        clear_pos_payments(frm);
-    } else if (frm.doc.custom_payment_mode === "Cash") {
-        frm.set_value("is_pos", 1);
-        sync_cash_payment(frm);
-    }
+    // Both Cash and Credit are non-POS. Cash creates a separate Payment Entry on submit.
+    frm.set_value("is_pos", 0);
+    clear_pos_payments(frm);
 }
 
 function sync_cash_payment(frm) {
@@ -670,7 +650,6 @@ frappe.ui.form.on("Sales Invoice Item", {
             }
         });
 
-        set_item_query(frm);
         calculate_item_tax_total(frm, cdt, cdn);
 
     },
@@ -751,23 +730,7 @@ function calculate_item_tax_total(frm, cdt, cdn) {
 
 
 
-function set_item_query(frm) {
-    frm.fields_dict["items"].grid.get_field("item_code").get_query = function(doc, cdt, cdn) {
-        let row = locals[cdt][cdn];
-
-        // Only apply query if branch exists
-        if (!frm.doc.branch) {
-            return {};  // empty query, shows all items or no filter
-        }
-
-        return {
-            query: "kenz_trading.events.sales_invoice.get_items_by_branch",
-            filters: {
-                branch: frm.doc.branch  // use frm.doc.branch if exists
-            }
-        };
-    };
-}
+// Item query is handled by customize_sales_invoice_item_field which shows all sales items
 
 
 
@@ -1599,63 +1562,4 @@ async function validate_last_invoice_rate(frm, cdt, cdn) {
 // SALES INVOICE ITEM SEARCH - Show All Items
 // =============================================
 
-function customize_sales_invoice_item_field(frm) {
-    // Wait for the items grid to be rendered
-    setTimeout(() => {
-        let items_grid = frm.fields_dict.items.grid;
-        if (items_grid) {
-            let item_field = items_grid.get_field('item_code');
-
-            if (item_field) {
-                item_field.get_query = function(doc, cdt, cdn) {
-                    return {
-                        query: "kenz_trading.events.sales_invoice.get_all_sales_items_for_link_field",
-                        page_len: 1000
-                    };
-                };
-
-                if (item_field.df) {
-                    item_field.df.page_len = 1000;
-                }
-            }
-
-            // Also override at the grid form level
-            if (items_grid.grid_form && items_grid.grid_form.fields_dict.item_code) {
-                items_grid.grid_form.fields_dict.item_code.get_query = function(doc, cdt, cdn) {
-                    return {
-                        query: "kenz_trading.events.sales_invoice.get_all_sales_items_for_link_field",
-                        page_len: 1000
-                    };
-                };
-            }
-        }
-    }, 1000);
-
-    // Override when new rows are added
-    setTimeout(() => {
-        if (frm.fields_dict.items && frm.fields_dict.items.grid) {
-            let original_add_new_row = frm.fields_dict.items.grid.add_new_row;
-            frm.fields_dict.items.grid.add_new_row = function(idx, callback, show) {
-                let result = original_add_new_row.call(this, idx, callback, show);
-
-                setTimeout(() => {
-                    let item_field = this.get_field('item_code');
-                    if (item_field) {
-                        item_field.get_query = function(doc, cdt, cdn) {
-                            return {
-                                query: "kenz_trading.events.sales_invoice.get_all_sales_items_for_link_field",
-                                page_len: 1000
-                            };
-                        };
-
-                        if (item_field.df) {
-                            item_field.df.page_len = 1000;
-                        }
-                    }
-                }, 500);
-
-                return result;
-            };
-        }
-    }, 1500);
-}
+// Item query for Sales Invoice items is set via frm.set_query in setup

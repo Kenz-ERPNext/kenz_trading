@@ -182,10 +182,13 @@ doc_events = {
 
     "Sales Invoice":{
         "before_validate": "kenz_trading.events.sales_invoice.apply_payment_mode_rules",
-        "on_submit":"kenz_trading.events.sales_invoice.on_submits",
+        "on_submit": [
+            "kenz_trading.events.sales_invoice.on_submits",
+            "kenz_trading.events.sales_invoice.create_payment_entry_for_cash"
+        ],
         "validate": "kenz_trading.events.sales_invoice.validate_item_branch",
         "has_permission": "kenz_trading.events.item.item_has_permission"
-        
+
     },
 
 }
@@ -218,9 +221,9 @@ doc_events = {
 
 # Overriding Methods
 # ------------------------------
-#
+
 # override_whitelisted_methods = {
-#     "erpnext.controllers.queries.item_query": "kenz_trading.events.sales_invoice.get_all_sales_items_for_link_field"
+#     "erpnext.controllers.queries.item_query": "kenz_trading.events.sales_invoice.custom_item_query"
 # }
 #
 # each overriding function accepts a `data` argument;
@@ -241,7 +244,7 @@ doc_events = {
 
 # Request Events
 # ----------------
-# before_request = ["kenz_trading.utils.before_request"]
+before_request = ["kenz_trading.patches.monkey_patches.apply"]
 # after_request = ["kenz_trading.utils.after_request"]
 
 # Job Events
