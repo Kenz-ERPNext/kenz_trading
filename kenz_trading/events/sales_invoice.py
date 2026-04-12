@@ -19,38 +19,32 @@ def get_uoms(item_code):
 
 @frappe.whitelist()
 def on_submits(doc, method):
-    # ✅ Item Variants section
-    if frappe.db.get_single_value("Kenza Settings", "activate_item_variant_save"):
-        for row in doc.items:
-            if not row.custom_remark or not row.item_code:
-                continue
+    """On submit hook — enqueues heavy operations as background jobs
+    so the invoice submit response returns fast."""
 
-            # Avoid duplicate variant for same invoice + remark
-            variant = frappe.db.get_value(
-                "Item Variants",
-                {"variant_name": row.custom_remark, "main_item": row.item_code},
-                "name"
+    # ✅ Item Variants — run in background after commit
+    if frappe.db.get_single_value("Kenza Settings", "activate_item_variant_save"):
+        # Collect variant data before enqueuing (doc may not be accessible later)
+        variant_items = []
+        for row in doc.items:
+            if row.custom_remark and row.item_code:
+                variant_items.append({
+                    "item_code": row.item_code,
+                    "custom_remark": row.custom_remark,
+                    "rate": row.rate,
+                })
+        if variant_items:
+            frappe.enqueue(
+                _create_item_variants_bg,
+                queue="short",
+                enqueue_after_commit=True,
+                invoice_name=doc.name,
+                customer=doc.customer,
+                posting_date=str(doc.posting_date),
+                variant_items=variant_items,
             )
 
-            if not variant:
-                iv = frappe.new_doc("Item Variants")
-                iv.variant_name = row.custom_remark
-                iv.main_item = row.item_code
-                iv.customer = doc.customer
-            else:
-                iv = frappe.get_doc("Item Variants", variant)
-
-            # ✅ Add row to Variant List child table
-            iv.append("variant_list", {
-                "invoice_no": doc.name,
-                "rate": row.rate,
-                "date": getdate(doc.posting_date),
-                "time": nowtime()
-            })
-
-            iv.save(ignore_permissions=True)
-
-    # ✅ Payment Entry section (independent)
+    # ✅ Payment Entry — run in background after commit
     if not frappe.db.get_single_value("Kenza Settings", "auto_create_payment"):
         return
 
@@ -63,65 +57,132 @@ def on_submits(doc, method):
     if not doc.outstanding_amount or doc.outstanding_amount <= 0:
         return
 
+    # Validate accounts exist before enqueuing (fail fast if misconfigured)
     paid_to_account = frappe.db.get_value(
         "Mode of Payment Account",
-        {
-            "parent": doc.custom_mode_of_payment,   # Mode of Payment
-            "company": doc.company
-        },
+        {"parent": doc.custom_mode_of_payment, "company": doc.company},
         "default_account"
     )
-
     if not paid_to_account:
         frappe.throw(
             f"Default Account not set for Mode of Payment <b>{doc.custom_mode_of_payment}</b>"
         )
 
     paid_from_account = frappe.db.get_value(
-        "Company",
-        doc.company,
-        "default_receivable_account"
+        "Company", doc.company, "default_receivable_account"
     )
-
     if not paid_from_account:
         frappe.throw(
             f"Default Receivable Account not set for Company <b>{doc.company}</b>"
         )
 
-    pe = frappe.new_doc("Payment Entry")
-    pe.payment_type = "Receive"
-    pe.posting_date = doc.posting_date
-    pe.mode_of_payment = doc.custom_mode_of_payment
-    pe.party_type = "Customer"
-    pe.party = doc.customer
-    pe.paid_to = paid_to_account
-    pe.paid_to_account_currency = doc.currency
-    pe.paid_from = paid_from_account
-    pe.paid_from_account_currency = doc.currency
-    pe.paid_amount = doc.outstanding_amount
-    pe.received_amount = doc.outstanding_amount
-    pe.source_exchange_rate = 1
-    pe.target_exchange_rate = 1
+    # Enqueue Payment Entry creation as background job
+    frappe.enqueue(
+        _create_payment_entry_bg,
+        queue="short",
+        enqueue_after_commit=True,
+        invoice_name=doc.name,
+        customer=doc.customer,
+        company=doc.company,
+        currency=doc.currency,
+        posting_date=str(doc.posting_date),
+        mode_of_payment=doc.custom_mode_of_payment,
+        outstanding_amount=doc.outstanding_amount,
+        grand_total=doc.grand_total,
+        paid_to_account=paid_to_account,
+        paid_from_account=paid_from_account,
+        cheque_number=getattr(doc, 'custom_cheque_number', None),
+        cheque_date=str(doc.custom_cheque_date) if getattr(doc, 'custom_cheque_date', None) else None,
+    )
 
-    if doc.custom_mode_of_payment == "Cheque":
-        pe.reference_no = doc.custom_cheque_number
-        pe.reference_date = doc.custom_cheque_date
-    else:
-        pe.reference_no = doc.name
-        pe.reference_date = doc.posting_date
 
-    pe.append("references", {
-        "reference_doctype": "Sales Invoice",
-        "reference_name": doc.name,
-        "total_amount": doc.grand_total,
-        "outstanding_amount": doc.outstanding_amount,
-        "allocated_amount": doc.outstanding_amount
-    })
+def _create_item_variants_bg(invoice_name, customer, posting_date, variant_items):
+    """Background job: create/update Item Variants after invoice submit."""
+    try:
+        for vi in variant_items:
+            variant = frappe.db.get_value(
+                "Item Variants",
+                {"variant_name": vi["custom_remark"], "main_item": vi["item_code"]},
+                "name"
+            )
 
-    pe.insert()
-    pe.submit()
+            if not variant:
+                iv = frappe.new_doc("Item Variants")
+                iv.variant_name = vi["custom_remark"]
+                iv.main_item = vi["item_code"]
+                iv.customer = customer
+            else:
+                iv = frappe.get_doc("Item Variants", variant)
 
-    frappe.msgprint(f"Payment Entry <b>{pe.name}</b> created successfully", indicator="green")
+            iv.append("variant_list", {
+                "invoice_no": invoice_name,
+                "rate": vi["rate"],
+                "date": getdate(posting_date),
+                "time": nowtime()
+            })
+            iv.save(ignore_permissions=True)
+
+        frappe.db.commit()
+    except Exception as e:
+        frappe.log_error(
+            title=f"Item Variants Background Error - {invoice_name}",
+            message=str(e)
+        )
+
+
+def _create_payment_entry_bg(
+    invoice_name, customer, company, currency, posting_date,
+    mode_of_payment, outstanding_amount, grand_total,
+    paid_to_account, paid_from_account, cheque_number=None, cheque_date=None
+):
+    """Background job: create Payment Entry after invoice submit."""
+    try:
+        # Re-check outstanding amount (may have changed)
+        current_outstanding = frappe.db.get_value(
+            "Sales Invoice", invoice_name, "outstanding_amount"
+        )
+        if not current_outstanding or current_outstanding <= 0:
+            return
+
+        pe = frappe.new_doc("Payment Entry")
+        pe.payment_type = "Receive"
+        pe.posting_date = posting_date
+        pe.mode_of_payment = mode_of_payment
+        pe.party_type = "Customer"
+        pe.party = customer
+        pe.paid_to = paid_to_account
+        pe.paid_to_account_currency = currency
+        pe.paid_from = paid_from_account
+        pe.paid_from_account_currency = currency
+        pe.paid_amount = current_outstanding
+        pe.received_amount = current_outstanding
+        pe.source_exchange_rate = 1
+        pe.target_exchange_rate = 1
+
+        if mode_of_payment == "Cheque" and cheque_number:
+            pe.reference_no = cheque_number
+            pe.reference_date = cheque_date or posting_date
+        else:
+            pe.reference_no = invoice_name
+            pe.reference_date = posting_date
+
+        pe.append("references", {
+            "reference_doctype": "Sales Invoice",
+            "reference_name": invoice_name,
+            "total_amount": grand_total,
+            "outstanding_amount": current_outstanding,
+            "allocated_amount": current_outstanding
+        })
+
+        pe.insert(ignore_permissions=True)
+        pe.submit()
+        frappe.db.commit()
+
+    except Exception as e:
+        frappe.log_error(
+            title=f"Payment Entry Background Error - {invoice_name}",
+            message=str(e)
+        )
 
 
    
