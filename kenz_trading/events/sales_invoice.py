@@ -124,7 +124,9 @@ def on_submits(doc, method):
     # =====================================================
     # ✅ AUTO REVERSE PAYMENT FOR CASH RETURN (FINAL FIXED)
     # =====================================================
-    if doc.is_return :
+    kenza_settings = frappe.get_single("Kenza Settings")
+
+    if doc.is_return and kenza_settings.create_payment_entry:
 
         payment_entries = frappe.get_all(
             "Payment Entry Reference",

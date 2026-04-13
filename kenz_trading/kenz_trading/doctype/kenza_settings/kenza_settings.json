@@ -41,6 +41,8 @@
   "default_item_tax_template",
   "auto_create_delivery_note_section",
   "enable_auto_create_dn",
+  "auto_create_sales_return_payment_section",
+  "create_payment_entry",
   "sales_order_tab",
   "show_item_variant_tables",
   "minimum_and_maximum_rate_validations",
@@ -359,13 +361,24 @@
    "fieldname": "enable_auto_create_dn",
    "fieldtype": "Check",
    "label": "Enable Auto Create DN"
+  },
+  {
+   "fieldname": "auto_create_sales_return_payment_section",
+   "fieldtype": "Section Break",
+   "label": "Auto Create Sales Return Payment"
+  },
+  {
+   "default": "0",
+   "fieldname": "create_payment_entry",
+   "fieldtype": "Check",
+   "label": "Create Payment Entry"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-04-11 15:09:30.729958",
+ "modified": "2026-04-13 13:05:13.420265",
  "modified_by": "Administrator",
  "module": "Kenz Trading",
  "name": "Kenza Settings",
