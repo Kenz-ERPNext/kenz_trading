@@ -58,7 +58,7 @@ frappe.ui.form.on("Sales Invoice", {
         }
     },
 
-
+ 
 
     custom_payment_mode: function (frm) {
         set_pos_value(frm);

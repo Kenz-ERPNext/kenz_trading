@@ -6,7 +6,7 @@ from num2words import num2words
 
 # Will be set by monkey_patches.apply() to store the original ERPNext item_query
 _original_item_query = None
-
+ 
 @frappe.whitelist()
 def get_default_branch(user):
     branch = frappe.db.get_value("User Permission", {"user":user,"allow":"Branch"}, "for_value")
@@ -96,7 +96,7 @@ def create_payment_entry_for_cash(doc, method=None):
     pe.paid_to = paid_account
     pe.paid_amount = payable_amount
     pe.received_amount = payable_amount
-    pe.reference_no = doc.name
+    # pe.reference_no = doc.name
     pe.reference_date = doc.posting_date
 
     pe.append("references", {
@@ -120,6 +120,91 @@ def create_payment_entry_for_cash(doc, method=None):
 
 @frappe.whitelist()
 def on_submits(doc, method):
+
+    # =====================================================
+    # ✅ AUTO REVERSE PAYMENT FOR CASH RETURN (FINAL FIXED)
+    # =====================================================
+    if doc.is_return :
+
+        payment_entries = frappe.get_all(
+            "Payment Entry Reference",
+            filters={
+                "reference_name": doc.return_against,
+                "reference_doctype": "Sales Invoice"
+            },
+            fields=["parent"]
+        )
+
+        for pe_ref in payment_entries:
+            pe = frappe.get_doc("Payment Entry", pe_ref.parent)
+
+            if pe.mode_of_payment != "Cash":
+                continue
+
+            # Prevent duplicate
+            if frappe.db.exists("Payment Entry", {
+                "remarks": ["like", f"%Return against {doc.name}%"]
+            }):
+                continue
+
+            amount = abs(doc.grand_total)
+
+            reverse_pe = frappe.new_doc("Payment Entry")
+
+            # 1️⃣ Basic
+            reverse_pe.payment_type = "Pay"
+            reverse_pe.company = doc.company
+            reverse_pe.posting_date = doc.posting_date
+
+            reverse_pe.party_type = "Customer"
+            reverse_pe.party = doc.customer
+
+            reverse_pe.mode_of_payment = "Cash"
+
+            # 2️⃣ Accounts (VERY IMPORTANT FIRST)
+            reverse_pe.paid_from = pe.paid_to
+            reverse_pe.paid_to = pe.paid_from
+            reverse_pe.party_account = pe.paid_from
+
+            # 3️⃣ 🔥 CALL THIS BEFORE AMOUNTS
+            reverse_pe.set_missing_values()
+
+            # 4️⃣ NOW set amounts
+            amount = abs(doc.grand_total)
+
+            reverse_pe.paid_amount = amount
+            reverse_pe.received_amount = amount
+
+            # 5️⃣ Force base values (CRITICAL FIX)
+            reverse_pe.source_exchange_rate = 1
+            reverse_pe.target_exchange_rate = 1
+
+            reverse_pe.base_paid_amount = amount
+            reverse_pe.base_received_amount = amount
+
+            # 6️⃣ Reference (negative)
+            reverse_pe.append("references", {
+                "reference_doctype": "Sales Invoice",
+                "reference_name": doc.name,
+                "total_amount": -amount,
+                "outstanding_amount": -amount,
+                "allocated_amount": -amount,
+                "account": pe.paid_from,
+            })
+
+            reverse_pe.reference_no = "Auto Refund"
+            reverse_pe.reference_date = doc.posting_date
+
+            reverse_pe.remarks = f"Amount {amount} to {doc.customer}\nReturn against {doc.name}"
+
+            # 7️⃣ Bypass validation
+            reverse_pe.flags.ignore_validate = True
+
+            reverse_pe.insert(ignore_permissions=True)
+            reverse_pe.submit()
+
+        frappe.msgprint("Reverse Cash Payment Entry Created")
+
 
 
     # # =====================================================
