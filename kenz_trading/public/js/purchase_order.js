@@ -1,9 +1,20 @@
 frappe.ui.form.on("Purchase Order", {
+    onload(frm) {
 
-    refresh(frm) {
-        // Item search handled by monkey patch on erpnext.controllers.queries.item_query
-    },
+        frm.fields_dict["items"].grid.get_field("uom").get_query = function (doc, cdt, cdn) {
+            let row = locals[cdt][cdn];
 
-    items_on_form_rendered(frm) {
-    },
+            if (!row.item_code) {
+                return {};
+            }
+
+            return {
+                query: "kenz_trading.events.purchase_order.get_item_uoms",
+                filters: {
+                    item_code: row.item_code
+                }
+            };
+        };
+
+    }
 });
