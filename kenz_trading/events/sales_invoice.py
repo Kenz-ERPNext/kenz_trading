@@ -128,6 +128,79 @@ def create_payment_entry_for_cash(doc, method=None):
 
 
 @frappe.whitelist()
+def backfill_missing_cash_payment_entries(only_returns=0, dry_run=0):
+    """
+    Find submitted Cash Sales Invoices that are missing a Payment Entry and create one.
+    - only_returns=1: process only return/credit note invoices
+    - dry_run=1: report what would happen without creating entries
+    """
+    only_returns = int(only_returns)
+    dry_run = int(dry_run)
+
+    filters = {
+        "docstatus": 1,
+        "custom_payment_mode": "Cash",
+    }
+    if only_returns:
+        filters["is_return"] = 1
+
+    invoices = frappe.get_all(
+        "Sales Invoice",
+        filters=filters,
+        fields=["name", "is_return", "grand_total", "rounded_total", "customer"],
+        order_by="posting_date asc",
+    )
+
+    results = {"created": [], "skipped": [], "failed": []}
+
+    for inv in invoices:
+        # Check if a Payment Entry already references this invoice
+        has_pe = frappe.db.exists(
+            "Payment Entry Reference",
+            {
+                "reference_doctype": "Sales Invoice",
+                "reference_name": inv.name,
+                "docstatus": 1,
+            },
+        )
+
+        if has_pe:
+            results["skipped"].append({"invoice": inv.name, "reason": "PE exists"})
+            continue
+
+        total = flt(inv.rounded_total or inv.grand_total or 0)
+        if total == 0:
+            results["skipped"].append({"invoice": inv.name, "reason": "zero total"})
+            continue
+
+        if dry_run:
+            results["created"].append({"invoice": inv.name, "total": total, "dry_run": True})
+            continue
+
+        try:
+            doc = frappe.get_doc("Sales Invoice", inv.name)
+            create_payment_entry_for_cash(doc)
+            results["created"].append({"invoice": inv.name, "total": total})
+            frappe.db.commit()
+        except Exception as e:
+            frappe.db.rollback()
+            results["failed"].append({"invoice": inv.name, "error": str(e)})
+            frappe.log_error(
+                title=f"Backfill PE failed for {inv.name}",
+                message=frappe.get_traceback(),
+            )
+
+    summary = (
+        f"Processed {len(invoices)} invoices | "
+        f"Created: {len(results['created'])} | "
+        f"Skipped: {len(results['skipped'])} | "
+        f"Failed: {len(results['failed'])}"
+    )
+    results["summary"] = summary
+    return results
+
+
+@frappe.whitelist()
 def on_submits(doc, method):
 
     # =====================================================
