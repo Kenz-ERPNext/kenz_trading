@@ -24,12 +24,9 @@ def apply_payment_mode_rules(doc, method=None):
     Keep Sales Invoice payment behaviour aligned with the custom Payment Mode field.
 
     - Cash  -> Normal invoice (not POS). A separate Payment Entry is created on submit.
+              For returns, a refund Payment Entry (Pay type) is created.
     - Credit -> Normal credit invoice with no payments so it stays Unpaid.
     """
-
-    # Skip credit-note scenarios
-    if doc.is_return:
-        return
 
     # Nothing to do if the custom field is empty
     if not getattr(doc, "custom_payment_mode", None):
@@ -51,10 +48,9 @@ def apply_payment_mode_rules(doc, method=None):
 def create_payment_entry_for_cash(doc, method=None):
     """
     Auto-create a separate Payment Entry for Cash invoices on submit.
+    - Regular invoice -> Receive Payment Entry (customer pays us)
+    - Return/Credit Note -> Pay Payment Entry (we refund the customer)
     """
-    if doc.is_return:
-        return
-
     if not getattr(doc, "custom_payment_mode", None) or doc.custom_payment_mode != "Cash":
         return
 
@@ -77,23 +73,33 @@ def create_payment_entry_for_cash(doc, method=None):
             ).format(mode_of_payment, doc.company or "")
         )
 
-    payable_amount = flt(doc.rounded_total or doc.grand_total or 0)
+    total_amount = flt(doc.rounded_total or doc.grand_total or 0)
 
-    if payable_amount <= 0:
+    if total_amount == 0:
         return
 
-    # Get the debit_to account from the Sales Invoice
+    payable_amount = abs(total_amount)
+    is_return = doc.is_return and total_amount < 0
     debit_to = doc.debit_to
 
     pe = frappe.new_doc("Payment Entry")
-    pe.payment_type = "Receive"
     pe.party_type = "Customer"
     pe.party = doc.customer
     pe.company = doc.company
     pe.posting_date = doc.posting_date
     pe.mode_of_payment = mode_of_payment
-    pe.paid_from = debit_to
-    pe.paid_to = paid_account
+
+    if is_return:
+        # Return invoice: refund cash to customer (Pay type)
+        pe.payment_type = "Pay"
+        pe.paid_from = paid_account
+        pe.paid_to = debit_to
+    else:
+        # Regular invoice: receive cash from customer (Receive type)
+        pe.payment_type = "Receive"
+        pe.paid_from = debit_to
+        pe.paid_to = paid_account
+
     pe.paid_amount = payable_amount
     pe.received_amount = payable_amount
     # pe.reference_no = doc.name
@@ -103,16 +109,19 @@ def create_payment_entry_for_cash(doc, method=None):
         "reference_doctype": "Sales Invoice",
         "reference_name": doc.name,
         "total_amount": doc.grand_total,
-        "outstanding_amount": payable_amount,
-        "allocated_amount": payable_amount,
+        "outstanding_amount": total_amount,
+        "allocated_amount": total_amount,
     })
 
     pe.insert(ignore_permissions=True)
     pe.submit()
 
+    msg_prefix = _("Refund Payment Entry") if is_return else _("Payment Entry")
     frappe.msgprint(
-        _("Payment Entry {0} created for Cash Invoice {1}").format(
-            frappe.utils.get_link_to_form("Payment Entry", pe.name), doc.name
+        _("{0} {1} created for {2}").format(
+            msg_prefix,
+            frappe.utils.get_link_to_form("Payment Entry", pe.name),
+            doc.name,
         ),
         alert=True,
     )
