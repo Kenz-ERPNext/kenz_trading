@@ -13,6 +13,7 @@ import csv
 import os
 import frappe
 from frappe.utils import flt, get_site_path
+from frappe.utils.xlsxutils import make_xlsx
 
 
 def _base_conditions():
@@ -172,3 +173,125 @@ def export_unlinked_pe_report(from_date=None, to_date=None, mode_of_payment=None
         "download_url": f"/private/files/{filename}",
     }
     return summary
+
+
+@frappe.whitelist()
+def export_excel(from_date=None, to_date=None, mode_of_payment=None):
+    """
+    Stream an Excel (.xlsx) file of unlinked Customer Payment Entries
+    directly as the HTTP response. Access via:
+    /api/method/kenz_trading.events.payment_entry_audit.export_excel
+    """
+    rows = get_unlinked_customer_payment_entries(
+        from_date=from_date, to_date=to_date, mode_of_payment=mode_of_payment
+    )
+
+    headers = [
+        "Payment Entry",
+        "Posting Date",
+        "Payment Type",
+        "Party",
+        "Party Name",
+        "Mode of Payment",
+        "Paid Amount",
+        "Received Amount",
+        "Reference No",
+        "Reference Date",
+        "Paid From",
+        "Paid To",
+        "Remarks",
+        "Owner",
+        "Created On",
+        "Modified By",
+    ]
+
+    data = [headers]
+    for r in rows:
+        data.append([
+            r.get("name"),
+            r.get("posting_date"),
+            r.get("payment_type"),
+            r.get("party"),
+            r.get("party_name"),
+            r.get("mode_of_payment"),
+            flt(r.get("paid_amount")),
+            flt(r.get("received_amount")),
+            r.get("reference_no"),
+            r.get("reference_date"),
+            r.get("paid_from"),
+            r.get("paid_to"),
+            r.get("remarks"),
+            r.get("owner"),
+            r.get("creation"),
+            r.get("modified_by"),
+        ])
+
+    xlsx_file = make_xlsx(data, "Unlinked Customer PEs")
+    filename = f"unlinked_customer_payment_entries_{frappe.utils.now_datetime().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    frappe.response["filename"] = filename
+    frappe.response["filecontent"] = xlsx_file.getvalue()
+    frappe.response["type"] = "binary"
+
+
+@frappe.whitelist()
+def export_duplicates_excel(tolerance=0.01):
+    """
+    Stream an Excel file listing unlinked PEs paired with their potential
+    duplicates (same party + date + amount) that ARE linked to a Sales
+    Invoice. Access via:
+    /api/method/kenz_trading.events.payment_entry_audit.export_duplicates_excel
+    """
+    dupes = find_potential_duplicates(tolerance=tolerance)
+
+    headers = [
+        "Unlinked PE",
+        "Posting Date",
+        "Party",
+        "Party Name",
+        "Paid Amount",
+        "Mode of Payment",
+        "Unlinked Owner",
+        "Matched Linked PE",
+        "Matched Sales Invoice",
+        "Matched Amount",
+        "Matched Date",
+        "Matched Owner",
+    ]
+
+    data = [headers]
+    for d in dupes:
+        if d.get("matches"):
+            for m in d["matches"]:
+                data.append([
+                    d.get("unlinked_pe"),
+                    d.get("posting_date"),
+                    d.get("party"),
+                    d.get("party_name"),
+                    flt(d.get("paid_amount")),
+                    d.get("mode_of_payment"),
+                    d.get("unlinked_owner"),
+                    m.get("linked_pe"),
+                    m.get("sales_invoice"),
+                    flt(m.get("paid_amount")),
+                    m.get("posting_date"),
+                    m.get("linked_owner"),
+                ])
+        else:
+            data.append([
+                d.get("unlinked_pe"),
+                d.get("posting_date"),
+                d.get("party"),
+                d.get("party_name"),
+                flt(d.get("paid_amount")),
+                d.get("mode_of_payment"),
+                d.get("unlinked_owner"),
+                "", "", "", "", "",
+            ])
+
+    xlsx_file = make_xlsx(data, "Potential Duplicate PEs")
+    filename = f"duplicate_pe_audit_{frappe.utils.now_datetime().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    frappe.response["filename"] = filename
+    frappe.response["filecontent"] = xlsx_file.getvalue()
+    frappe.response["type"] = "binary"
