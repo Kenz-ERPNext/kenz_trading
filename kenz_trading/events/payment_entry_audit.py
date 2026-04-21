@@ -235,6 +235,125 @@ def export_excel(from_date=None, to_date=None, mode_of_payment=None):
 
 
 @frappe.whitelist()
+def export_sales_invoice_payment_excel(from_date=None, to_date=None, payment_mode=None, customer=None):
+    """
+    Download an Excel of ALL submitted Sales Invoices with:
+    - Sales Invoice ID
+    - Posting Date
+    - Customer
+    - Payment Mode (custom_payment_mode)
+    - Grand Total
+    - Linked Payment Entry (from Payment Entry Reference)
+    - Other unlinked Payment Entries for the same customer (PEs with no SI reference)
+
+    Access via:
+    /api/method/kenz_trading.events.payment_entry_audit.export_sales_invoice_payment_excel
+    """
+    params = {}
+    extra = ""
+    if from_date:
+        extra += " AND si.posting_date >= %(from_date)s"
+        params["from_date"] = from_date
+    if to_date:
+        extra += " AND si.posting_date <= %(to_date)s"
+        params["to_date"] = to_date
+    if payment_mode:
+        extra += " AND si.custom_payment_mode = %(pm)s"
+        params["pm"] = payment_mode
+    if customer:
+        extra += " AND si.customer = %(customer)s"
+        params["customer"] = customer
+
+    invoices = frappe.db.sql(
+        f"""
+        SELECT
+            si.name AS invoice,
+            si.posting_date,
+            si.customer,
+            si.customer_name,
+            si.custom_payment_mode,
+            si.is_return,
+            si.grand_total,
+            si.outstanding_amount,
+            (SELECT GROUP_CONCAT(per.parent SEPARATOR ', ')
+             FROM `tabPayment Entry Reference` per
+             INNER JOIN `tabPayment Entry` pe2 ON pe2.name = per.parent
+             WHERE per.reference_doctype = 'Sales Invoice'
+                 AND per.reference_name = si.name
+                 AND pe2.docstatus = 1
+            ) AS linked_pe
+        FROM `tabSales Invoice` si
+        WHERE si.docstatus = 1
+            {extra}
+        ORDER BY si.posting_date DESC, si.creation DESC
+        """,
+        params,
+        as_dict=True,
+    )
+
+    # For each customer, find unlinked PEs (no SI reference)
+    customer_unlinked = {}
+    customers = list({inv.customer for inv in invoices if inv.customer})
+    if customers:
+        unlinked_rows = frappe.db.sql(
+            """
+            SELECT pe.name, pe.posting_date, pe.party, pe.paid_amount, pe.payment_type
+            FROM `tabPayment Entry` pe
+            WHERE pe.docstatus = 1
+                AND pe.party_type = 'Customer'
+                AND pe.party IN %(customers)s
+                AND NOT EXISTS (
+                    SELECT 1 FROM `tabPayment Entry Reference` per
+                    WHERE per.parent = pe.name
+                        AND per.reference_doctype = 'Sales Invoice'
+                )
+            ORDER BY pe.posting_date DESC
+            """,
+            {"customers": tuple(customers)},
+            as_dict=True,
+        )
+        for r in unlinked_rows:
+            customer_unlinked.setdefault(r.party, []).append(
+                f"{r.name} ({r.posting_date} {r.payment_type} {flt(r.paid_amount):.2f})"
+            )
+
+    headers = [
+        "Sales Invoice",
+        "Posting Date",
+        "Customer",
+        "Customer Name",
+        "Payment Mode",
+        "Is Return",
+        "Grand Total",
+        "Outstanding Amount",
+        "Linked Payment Entry",
+        "Customer's Unlinked PEs",
+    ]
+
+    data = [headers]
+    for inv in invoices:
+        data.append([
+            inv.invoice,
+            inv.posting_date,
+            inv.customer,
+            inv.customer_name,
+            inv.custom_payment_mode,
+            "Yes" if inv.is_return else "No",
+            flt(inv.grand_total),
+            flt(inv.outstanding_amount),
+            inv.linked_pe or "",
+            "; ".join(customer_unlinked.get(inv.customer, [])),
+        ])
+
+    xlsx_file = make_xlsx(data, "Sales Invoice Payment Audit")
+    filename = f"sales_invoice_payment_audit_{frappe.utils.now_datetime().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    frappe.response["filename"] = filename
+    frappe.response["filecontent"] = xlsx_file.getvalue()
+    frappe.response["type"] = "binary"
+
+
+@frappe.whitelist()
 def export_duplicates_excel(tolerance=0.01):
     """
     Stream an Excel file listing unlinked PEs paired with their potential
