@@ -14,8 +14,9 @@ def execute(filters=None):
 
 def get_columns():
     return [
-        {"label": _("Item Code"), "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 140},
+        {"label": _("Item Code"), "fieldname": "item_code", "fieldtype": "Data", "width": 140},
         {"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data", "width": 220},
+        {"label": _("Item Name (Arabic)"), "fieldname": "custom_item_name_in_arabic", "fieldtype": "Data", "width": 220},
         {"label": _("Item Group"), "fieldname": "item_group", "fieldtype": "Link", "options": "Item Group", "width": 140},
         {"label": _("Brand"), "fieldname": "brand", "fieldtype": "Link", "options": "Brand", "width": 110},
         {"label": _("Default UOM"), "fieldname": "stock_uom", "fieldtype": "Link", "options": "UOM", "width": 90},
@@ -56,6 +57,7 @@ def get_data(filters):
         SELECT
             i.name AS item_code,
             i.item_name,
+            i.custom_item_name_in_arabic,
             i.item_group,
             i.brand,
             i.stock_uom,
@@ -158,6 +160,7 @@ def get_data(filters):
         data.append({
             "item_code": it.item_code,
             "item_name": it.item_name,
+            "custom_item_name_in_arabic": it.custom_item_name_in_arabic,
             "item_group": it.item_group,
             "brand": it.brand,
             "stock_uom": it.stock_uom,
