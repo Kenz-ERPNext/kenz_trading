@@ -6,6 +6,7 @@ own outstanding goes to zero and the original invoice's outstanding
 absorbs the credit.
 """
 
+import re
 from typing import List
 
 import frappe
@@ -84,7 +85,8 @@ def _process(doctype: str, phase: str, audit: AuditBuffer, dry_run: bool) -> Non
 			)
 			continue
 
-		savepoint = f"sp_{phase}_{r['name'].replace('/', '_').replace(' ', '_')}"
+		safe_name = re.sub(r"[^a-zA-Z0-9_]", "_", r['name'])
+		savepoint = f"sp_{phase}_{safe_name}"
 		try:
 			frappe.db.savepoint(savepoint)
 			frappe.db.set_value(

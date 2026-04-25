@@ -5,6 +5,7 @@ Invoices. FIFO per party (oldest invoice first). Goes through ERPNext's
 PaymentReconciliation controller — no raw GL writes.
 """
 
+import re
 from datetime import date
 from typing import List
 
@@ -156,7 +157,8 @@ def _reconcile_party(
 		return
 
 	# Live: execute reconcile() and record outcomes.
-	savepoint = f"sp_{phase}_{party.replace(' ', '_')}"
+	safe_party = re.sub(r"[^a-zA-Z0-9_]", "_", party)
+	savepoint = f"sp_{phase}_{safe_party}"
 	try:
 		frappe.db.savepoint(savepoint)
 		pr.reconcile()

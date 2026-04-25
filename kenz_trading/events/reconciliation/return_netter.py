@@ -5,6 +5,7 @@ the PaymentReconciliation controller — credit/debit notes are exposed
 in its `payments` collection (see PaymentReconciliation.get_dr_or_cr_notes).
 """
 
+import re
 from datetime import date
 from typing import List
 
@@ -140,7 +141,8 @@ def _net_party(
 			audit.reconciled(p)
 		return
 
-	savepoint = f"sp_{phase}_{party.replace(' ', '_')}"
+	safe_party = re.sub(r"[^a-zA-Z0-9_]", "_", party)
+	savepoint = f"sp_{phase}_{safe_party}"
 	try:
 		frappe.db.savepoint(savepoint)
 		pr.reconcile()
