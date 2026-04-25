@@ -24,9 +24,12 @@ def apply_payment_mode_rules(doc, method=None):
     Keep Sales Invoice payment behaviour aligned with the custom Payment Mode field.
 
     - Cash  -> Normal invoice (not POS). A separate Payment Entry is created on submit.
-              For returns, a refund Payment Entry (Pay type) is created.
     - Credit -> Normal credit invoice with no payments so it stays Unpaid.
     """
+
+    # Skip credit-note scenarios
+    if doc.is_return:
+        return
 
     # Nothing to do if the custom field is empty
     if not getattr(doc, "custom_payment_mode", None):
@@ -43,13 +46,27 @@ def apply_payment_mode_rules(doc, method=None):
         doc.set("payments", [])
 
 
- 
+
+
+
+
 def create_payment_entry_for_cash(doc, method=None):
     """
     Auto-create Payment Entry for Cash and Bank invoices on submit.
     """
 
     if doc.is_return:
+        return
+
+    # ✅ Only run if checkbox is enabled
+    # if not doc.get("your_checkbox_field"):
+    #     return
+
+    # ✅ FIX: Use correct field name here
+    payment_mode = doc.get("custom_payment_mode")
+
+    # ✅ Skip for Credit
+    if payment_mode == "Credit":
         return
 
     # Prevent duplicate Payment Entry
@@ -100,8 +117,6 @@ def create_payment_entry_for_cash(doc, method=None):
         pe.paid_to = paid_account
         pe.paid_amount = payable_amount
         pe.received_amount = payable_amount
-
-        # Cash → no need reference_no
         pe.reference_date = doc.posting_date
 
         pe.append("references", {
@@ -160,7 +175,6 @@ def create_payment_entry_for_cash(doc, method=None):
         pe.paid_amount = payable_amount
         pe.received_amount = payable_amount
 
-        # ✅ Mandatory for Bank
         pe.reference_no = doc.name
         pe.reference_date = nowdate()
 
@@ -180,150 +194,144 @@ def create_payment_entry_for_cash(doc, method=None):
             .format(frappe.utils.get_link_to_form("Payment Entry", pe.name), doc.name),
             alert=True,
         )
-
-
-        
+ 
 # def create_payment_entry_for_cash(doc, method=None):
 #     """
-#     Auto-create a separate Payment Entry for Cash invoices on submit.
+#     Auto-create Payment Entry for Cash and Bank invoices on submit.
 #     """
+
 #     if doc.is_return:
 #         return
 
-#     if not getattr(doc, "custom_payment_mode", None) or doc.custom_payment_mode != "Cash":
+#     # Prevent duplicate Payment Entry
+#     if frappe.db.exists(
+#         "Payment Entry Reference",
+#         {
+#             "reference_name": doc.name,
+#             "reference_doctype": "Sales Invoice"
+#         }
+#     ):
 #         return
 
-#     mode_of_payment = doc.get("custom_mode_of_payment") or "Cash"
-#     if not frappe.db.exists("Mode of Payment", mode_of_payment):
-#         frappe.throw(_("Please select a valid Mode of Payment for cash invoices."))
+#     # =========================
+#     # CASH LOGIC
+#     # =========================
+#     if doc.get("custom_mode_of_payment") == "Cash":
 
-#     paid_account = None
-#     if doc.company:
+#         mode_of_payment = "Cash"
+
+#         if not frappe.db.exists("Mode of Payment", mode_of_payment):
+#             frappe.throw(_("Please select a valid Mode of Payment for cash invoices."))
+
 #         paid_account = frappe.db.get_value(
 #             "Mode of Payment Account",
 #             {"parent": mode_of_payment, "company": doc.company},
 #             "default_account",
 #         )
 
-#     if not paid_account:
-#         frappe.throw(
-#             _(
-#                 "Default Account is required for Mode of Payment {0} in Company {1}."
-#             ).format(mode_of_payment, doc.company or "")
+#         if not paid_account:
+#             frappe.throw(
+#                 _("Default Account is required for Mode of Payment {0} in Company {1}.")
+#                 .format(mode_of_payment, doc.company or "")
+#             )
+
+#         payable_amount = flt(doc.rounded_total or doc.grand_total or 0)
+
+#         if payable_amount <= 0:
+#             return
+
+#         pe = frappe.new_doc("Payment Entry")
+#         pe.payment_type = "Receive"
+#         pe.party_type = "Customer"
+#         pe.party = doc.customer
+#         pe.company = doc.company
+#         pe.posting_date = doc.posting_date
+#         pe.mode_of_payment = mode_of_payment
+#         pe.paid_from = doc.debit_to
+#         pe.paid_to = paid_account
+#         pe.paid_amount = payable_amount
+#         pe.received_amount = payable_amount
+
+#         # Cash → no need reference_no
+#         pe.reference_date = doc.posting_date
+
+#         pe.append("references", {
+#             "reference_doctype": "Sales Invoice",
+#             "reference_name": doc.name,
+#             "total_amount": doc.grand_total,
+#             "outstanding_amount": payable_amount,
+#             "allocated_amount": payable_amount,
+#         })
+
+#         pe.insert(ignore_permissions=True)
+#         pe.submit()
+
+#         frappe.msgprint(
+#             _("Payment Entry {0} created for Cash Invoice {1}")
+#             .format(frappe.utils.get_link_to_form("Payment Entry", pe.name), doc.name),
+#             alert=True,
 #         )
 
-#     payable_amount = flt(doc.rounded_total or doc.grand_total or 0)
+#     # =========================
+#     # BANK LOGIC
+#     # =========================
+#     if doc.get("custom_mode_of_payment") == "Bank":
 
-#     if payable_amount <= 0:
-#         return
+#         mode_of_payment = "Bank"
 
-#     # Get the debit_to account from the Sales Invoice
-#     debit_to = doc.debit_to
+#         if not frappe.db.exists("Mode of Payment", mode_of_payment):
+#             frappe.throw(_("Please select a valid Mode of Payment for Bank invoices."))
 
-#     pe = frappe.new_doc("Payment Entry")
-#     pe.payment_type = "Receive"
-#     pe.party_type = "Customer"
-#     pe.party = doc.customer
-#     pe.company = doc.company
-#     pe.posting_date = doc.posting_date
-#     pe.mode_of_payment = mode_of_payment
-#     pe.paid_from = debit_to
-#     pe.paid_to = paid_account
-#     pe.paid_amount = payable_amount
-#     pe.received_amount = payable_amount
-#     # pe.reference_no = doc.name
-#     pe.reference_date = doc.posting_date
+#         paid_account = frappe.db.get_value(
+#             "Mode of Payment Account",
+#             {"parent": mode_of_payment, "company": doc.company},
+#             "default_account",
+#         )
 
-#     pe.append("references", {
-#         "reference_doctype": "Sales Invoice",
-#         "reference_name": doc.name,
-#         "total_amount": doc.grand_total,
-#         "outstanding_amount": payable_amount,
-#         "allocated_amount": payable_amount,
-#     })
+#         if not paid_account:
+#             frappe.throw(
+#                 _("Default Account is required for Mode of Payment {0} in Company {1}.")
+#                 .format(mode_of_payment, doc.company or "")
+#             )
 
-#     pe.insert(ignore_permissions=True)
-#     pe.submit()
+#         payable_amount = flt(doc.rounded_total or doc.grand_total or 0)
 
-#     frappe.msgprint(
-#         _("Payment Entry {0} created for Cash Invoice {1}").format(
-#             frappe.utils.get_link_to_form("Payment Entry", pe.name), doc.name
-#         ),
-#         alert=True,
-#     )
+#         if payable_amount <= 0:
+#             return
 
+#         pe = frappe.new_doc("Payment Entry")
+#         pe.payment_type = "Receive"
+#         pe.party_type = "Customer"
+#         pe.party = doc.customer
+#         pe.company = doc.company
+#         pe.posting_date = doc.posting_date
+#         pe.mode_of_payment = mode_of_payment
+#         pe.paid_from = doc.debit_to
+#         pe.paid_to = paid_account
+#         pe.paid_amount = payable_amount
+#         pe.received_amount = payable_amount
 
-@frappe.whitelist()
-def backfill_missing_cash_payment_entries(only_returns=0, dry_run=0):
-    """
-    Find submitted Cash Sales Invoices that are missing a Payment Entry and create one.
-    - only_returns=1: process only return/credit note invoices
-    - dry_run=1: report what would happen without creating entries
-    """
-    only_returns = int(only_returns)
-    dry_run = int(dry_run)
+#         # ✅ Mandatory for Bank
+#         pe.reference_no = doc.name
+#         pe.reference_date = nowdate()
 
-    filters = {
-        "docstatus": 1,
-        "custom_payment_mode": "Cash",
-    }
-    if only_returns:
-        filters["is_return"] = 1
+#         pe.append("references", {
+#             "reference_doctype": "Sales Invoice",
+#             "reference_name": doc.name,
+#             "total_amount": doc.grand_total,
+#             "outstanding_amount": payable_amount,
+#             "allocated_amount": payable_amount,
+#         })
 
-    invoices = frappe.get_all(
-        "Sales Invoice",
-        filters=filters,
-        fields=["name", "is_return", "grand_total", "rounded_total", "customer"],
-        order_by="posting_date asc",
-    )
+#         pe.insert(ignore_permissions=True)
+#         pe.submit()
 
-    results = {"created": [], "skipped": [], "failed": []}
+#         frappe.msgprint(
+#             _("Payment Entry {0} created for Bank Invoice {1}")
+#             .format(frappe.utils.get_link_to_form("Payment Entry", pe.name), doc.name),
+#             alert=True,
+#         )
 
-    for inv in invoices:
-        # Check if a Payment Entry already references this invoice
-        has_pe = frappe.db.exists(
-            "Payment Entry Reference",
-            {
-                "reference_doctype": "Sales Invoice",
-                "reference_name": inv.name,
-                "docstatus": 1,
-            },
-        )
-
-        if has_pe:
-            results["skipped"].append({"invoice": inv.name, "reason": "PE exists"})
-            continue
-
-        total = flt(inv.rounded_total or inv.grand_total or 0)
-        if total == 0:
-            results["skipped"].append({"invoice": inv.name, "reason": "zero total"})
-            continue
-
-        if dry_run:
-            results["created"].append({"invoice": inv.name, "total": total, "dry_run": True})
-            continue
-
-        try:
-            doc = frappe.get_doc("Sales Invoice", inv.name)
-            create_payment_entry_for_cash(doc)
-            results["created"].append({"invoice": inv.name, "total": total})
-            frappe.db.commit()
-        except Exception as e:
-            frappe.db.rollback()
-            results["failed"].append({"invoice": inv.name, "error": str(e)})
-            frappe.log_error(
-                title=f"Backfill PE failed for {inv.name}",
-                message=frappe.get_traceback(),
-            )
-
-    summary = (
-        f"Processed {len(invoices)} invoices | "
-        f"Created: {len(results['created'])} | "
-        f"Skipped: {len(results['skipped'])} | "
-        f"Failed: {len(results['failed'])}"
-    )
-    results["summary"] = summary
-    return results
 
 
 @frappe.whitelist()
