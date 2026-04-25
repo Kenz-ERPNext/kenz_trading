@@ -5,3 +5,4 @@
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
 kenz_trading.patches.backfill_cash_payment_entries
+kenz_trading.patches.reconcile_outstanding_payments
