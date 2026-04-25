@@ -125,3 +125,27 @@ def run_for_party(party_type: str, party: str, dry_run: int = 1, company: Option
 		phase=phase, audit=audit, dry_run=bool(dry_run),
 	)
 	return _finalize(audit, bool(dry_run))
+
+
+@frappe.whitelist()
+def download_audit(filename: str) -> None:
+	"""
+	Stream a reconciliation_audit_*.xlsx file from sites/<site>/private/files/.
+	Filename must start with `reconciliation_audit_` to prevent path traversal.
+	"""
+	import os
+	from frappe.utils import get_site_path
+
+	if not filename.startswith("reconciliation_audit_") or "/" in filename or ".." in filename:
+		frappe.throw("Invalid filename")
+
+	path = os.path.join(get_site_path("private", "files"), filename)
+	if not os.path.isfile(path):
+		frappe.throw(f"File not found: {filename}")
+
+	with open(path, "rb") as f:
+		content = f.read()
+
+	frappe.response["filename"] = filename
+	frappe.response["filecontent"] = content
+	frappe.response["type"] = "binary"
