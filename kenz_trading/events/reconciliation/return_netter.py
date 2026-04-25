@@ -89,6 +89,11 @@ def _net_party(
 	if not allocations:
 		return
 
+	# Filter to same-doctype targets only — skip Journal Entry etc.
+	allocations = [a for a in allocations if (a.invoice_type or doctype) == doctype]
+	if not allocations:
+		return
+
 	proposals = []
 	for alloc in allocations:
 		ad = alloc.as_dict()

@@ -96,12 +96,19 @@ def _reconcile_party(
 	if not allocations:
 		return
 
+	# Filter to invoice targets only — skip Journal Entry / other doctypes
+	# we don't want to auto-reconcile PEs against.
+	expected_invoice_doctype = "Sales Invoice" if party_type == "Customer" else "Purchase Invoice"
+	allocations = [a for a in allocations if (a.invoice_type or expected_invoice_doctype) == expected_invoice_doctype]
+	if not allocations:
+		return
+
 	# Translate each allocation row to an AllocationProposal for audit.
 	proposals = []
 	for alloc in allocations:
 		alloc_dict = alloc.as_dict()
 		invoice_name = alloc_dict.get("invoice_number")
-		invoice_doctype = alloc_dict.get("invoice_type", "Sales Invoice" if party_type == "Customer" else "Purchase Invoice")
+		invoice_doctype = alloc_dict.get("invoice_type", expected_invoice_doctype)
 
 		invoice_meta = frappe.db.get_value(
 			invoice_doctype,
