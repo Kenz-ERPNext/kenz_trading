@@ -186,9 +186,16 @@ doc_events = {
             "kenz_trading.events.sales_invoice.on_submits",
             "kenz_trading.events.sales_invoice.create_payment_entry_for_cash"
         ],
-        "validate": "kenz_trading.events.sales_invoice.validate_item_branch",
+        "validate": [
+            "kenz_trading.events.sales_invoice.validate_item_branch",
+            "kenz_trading.events.sales_invoice.force_uncheck_update_outstanding_for_self",
+        ],
         "has_permission": "kenz_trading.events.item.item_has_permission"
 
+    },
+
+    "Purchase Invoice":{
+        "validate": "kenz_trading.events.purchase_invoice.force_uncheck_update_outstanding_for_self",
     },
 
 }
