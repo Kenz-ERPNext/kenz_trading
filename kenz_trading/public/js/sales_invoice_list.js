@@ -84,6 +84,35 @@
 
 frappe.listview_settings["Sales Invoice"] = frappe.listview_settings["Sales Invoice"] || {};
 
+// Ensure the status indicator (Paid / Return / Credit Note Issued / Unpaid / Overdue ...)
+// is present even when this script bundles ahead of ERPNext's standard list config.
+// Without this, the list falls back to the docstatus indicator and shows everything as "Submitted".
+const _kenz_si_status_colors = {
+    Draft: "red",
+    Unpaid: "orange",
+    Paid: "green",
+    Return: "gray",
+    "Credit Note Issued": "gray",
+    "Unpaid and Discounted": "orange",
+    "Partly Paid and Discounted": "yellow",
+    "Overdue and Discounted": "red",
+    Overdue: "red",
+    "Partly Paid": "yellow",
+    "Internal Transfer": "darkgrey",
+};
+
+if (!frappe.listview_settings["Sales Invoice"].get_indicator) {
+    frappe.listview_settings["Sales Invoice"].get_indicator = function (doc) {
+        return [__(doc.status), _kenz_si_status_colors[doc.status] || "blue", "status,=," + doc.status];
+    };
+}
+
+const _kenz_si_extra_fields = ["status", "outstanding_amount", "is_return", "currency", "due_date", "customer_name"];
+frappe.listview_settings["Sales Invoice"].add_fields = Array.from(new Set([
+    ...(frappe.listview_settings["Sales Invoice"].add_fields || []),
+    ..._kenz_si_extra_fields,
+]));
+
 let original_onload = frappe.listview_settings["Sales Invoice"].onload;
 
 frappe.listview_settings["Sales Invoice"].onload = function(listview) {
