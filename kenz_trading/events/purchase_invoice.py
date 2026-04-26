@@ -3,18 +3,18 @@
 
 def force_uncheck_update_outstanding_for_self(doc, method=None):
 	"""
-	When a Purchase Invoice return (Debit Note) has a `return_against`
-	set, the debit note should reduce the original invoice's outstanding
-	rather than carrying its own. Forcefully clears
-	`update_outstanding_for_self` to keep books in sync with the bulk
-	reconciliation patch.
+	When a Credit-mode Purchase Invoice return (Debit Note) has a
+	`return_against` set, force-clear `update_outstanding_for_self` so the
+	debit note reduces the original invoice's outstanding directly.
 
-	Standalone returns (no return_against) are left alone — those need
-	their own outstanding because there's no original to reduce.
+	Cash / Bank returns are skipped — the refund Payment Entry handles
+	netting via direct allocation.
 	"""
 	if not doc.get("is_return"):
 		return
 	if not doc.get("return_against"):
+		return
+	if doc.get("custom_payment_mode") != "Credit":
 		return
 	if doc.get("update_outstanding_for_self"):
 		doc.update_outstanding_for_self = 0

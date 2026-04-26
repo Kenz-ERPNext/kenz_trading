@@ -1582,7 +1582,12 @@ frappe.ui.form.on("Sales Invoice", {
 });
 
 function _kenz_force_uncheck_outstanding_self(frm) {
-	if (frm.doc.is_return && frm.doc.return_against && frm.doc.update_outstanding_for_self) {
+	if (
+		frm.doc.is_return &&
+		frm.doc.return_against &&
+		frm.doc.custom_payment_mode === "Credit" &&
+		frm.doc.update_outstanding_for_self
+	) {
 		frm.set_value("update_outstanding_for_self", 0);
 	}
 }

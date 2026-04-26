@@ -149,3 +149,96 @@ def download_audit(filename: str) -> None:
 	frappe.response["filename"] = filename
 	frappe.response["filecontent"] = content
 	frappe.response["type"] = "binary"
+
+
+@frappe.whitelist()
+def recover_cash_return_pe(invoice_name: str) -> dict:
+	"""
+	Recover a Cash/Bank Sales Invoice return whose `update_outstanding_for_self`
+	was prematurely set to 0 (so its outstanding got absorbed into the
+	original invoice). Restores the flag to 1, recomputes outstanding on
+	both the return and the original, then creates the refund Payment Entry
+	by invoking the on_submit handler.
+	"""
+	from erpnext.accounts.doctype.gl_entry.gl_entry import update_outstanding_amt
+	from kenz_trading.events.sales_invoice import create_payment_entry_for_cash
+
+	doc = frappe.get_doc("Sales Invoice", invoice_name)
+	if not doc.is_return:
+		frappe.throw(f"{invoice_name} is not a return invoice")
+	if doc.docstatus != 1:
+		frappe.throw(f"{invoice_name} must be submitted")
+	if doc.get("custom_payment_mode") not in ("Cash", "Bank"):
+		frappe.throw(f"{invoice_name} is not a Cash/Bank invoice")
+
+	# Skip if a submitted PE already references this invoice
+	if frappe.db.exists(
+		"Payment Entry Reference",
+		{
+			"reference_doctype": "Sales Invoice",
+			"reference_name": invoice_name,
+			"docstatus": 1,
+		},
+	):
+		return {"invoice": invoice_name, "status": "already_has_pe", "pe": None}
+
+	original_name = doc.return_against
+	original_outstanding_before = None
+	if original_name:
+		original_outstanding_before = frappe.db.get_value(
+			"Sales Invoice", original_name, "outstanding_amount"
+		)
+
+	# Restore flag and recompute
+	frappe.db.set_value(
+		"Sales Invoice", invoice_name, "update_outstanding_for_self", 1,
+		update_modified=False,
+	)
+
+	update_outstanding_amt(
+		account=doc.debit_to,
+		party_type="Customer",
+		party=doc.customer,
+		against_voucher_type="Sales Invoice",
+		against_voucher=invoice_name,
+	)
+	if original_name and frappe.db.exists("Sales Invoice", original_name):
+		orig = frappe.get_doc("Sales Invoice", original_name)
+		update_outstanding_amt(
+			account=orig.debit_to,
+			party_type="Customer",
+			party=orig.customer,
+			against_voucher_type="Sales Invoice",
+			against_voucher=original_name,
+		)
+
+	# Reload the return so doc.outstanding_amount reflects the recompute
+	doc.reload()
+
+	# Now create the refund PE via the standard handler
+	create_payment_entry_for_cash(doc)
+	frappe.db.commit()
+
+	# Find the newly created PE
+	pe_name = frappe.db.get_value(
+		"Payment Entry Reference",
+		{
+			"reference_doctype": "Sales Invoice",
+			"reference_name": invoice_name,
+			"docstatus": 1,
+		},
+		"parent",
+	)
+
+	return {
+		"invoice": invoice_name,
+		"status": "recovered" if pe_name else "no_pe_created",
+		"pe": pe_name,
+		"return_outstanding_after": frappe.db.get_value("Sales Invoice", invoice_name, "outstanding_amount"),
+		"original": original_name,
+		"original_outstanding_before": original_outstanding_before,
+		"original_outstanding_after": (
+			frappe.db.get_value("Sales Invoice", original_name, "outstanding_amount")
+			if original_name else None
+		),
+	}
