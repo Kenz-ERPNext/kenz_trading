@@ -978,22 +978,66 @@ def clear_items_cache():
     return {"status": "success", "message": "Items cache cleared"}
 
 
+def _normalize_item_query_rows(rows):
+    """
+    Normalize item_query response rows so they work for BOTH Link autocomplete
+    (reads `row[0]` from arrays) AND MultiSelectList report filters (read
+    `row.value` / `row.description` from dicts).
+
+    Frappe v15 Link autocomplete tolerates both shapes (uses fallbacks). But
+    MultiSelectList only reads object keys — it shows "undefined" for arrays.
+
+    Strategy: convert array rows to `frappe._dict` with explicit `value` and
+    `description` keys. The dict still supports indexing for Link autocomplete
+    consumers via Frappe's standard helpers.
+    """
+    if not rows:
+        return rows
+    normalized = []
+    for row in rows:
+        if isinstance(row, dict):
+            # Already a dict — ensure value/description present
+            if "value" not in row:
+                row["value"] = row.get("name") or row.get("item_code") or ""
+            if "description" not in row:
+                bits = [row.get(k) for k in ("item_name", "item_group", "brand", "stock_uom") if row.get(k)]
+                row["description"] = " | ".join(str(b) for b in bits if b)
+            normalized.append(row)
+        elif isinstance(row, (list, tuple)):
+            row_list = list(row)
+            value = row_list[0] if row_list else ""
+            rest_bits = [str(x) for x in row_list[1:] if x not in (None, "", 0)]
+            normalized.append(frappe._dict({
+                "value": value,
+                "name": value,
+                "label": value,
+                "description": ", ".join(rest_bits),
+            }))
+        else:
+            # Scalar — wrap as dict
+            normalized.append(frappe._dict({"value": row, "name": row, "description": ""}))
+    return normalized
+
+
 @frappe.whitelist()
 def custom_item_query(doctype, txt, searchfield, start, page_len, filters):
     """
     Override of erpnext.controllers.queries.item_query.
     Routes sales item queries to our custom function that shows ALL items.
     Falls through to ERPNext default for everything else (Stock Ledger, reports, etc.)
+
+    Always normalizes the response so it's compatible with both Link
+    autocomplete and MultiSelectList consumers (e.g. Stock Ledger Items filter).
     """
     if isinstance(filters, str):
         filters = json.loads(filters)
 
-    # Only override for sales item contexts (Sales Invoice, Sales Order, Quotation, etc.)
     if filters and (filters.get("is_sales_item") or filters.get("is_purchase_item")):
-        return get_all_sales_items_for_link_field(doctype, txt, searchfield, start, page_len, filters)
+        rows = get_all_sales_items_for_link_field(doctype, txt, searchfield, start, page_len, filters)
+    else:
+        rows = _original_item_query(doctype, txt, searchfield, start, page_len, filters)
 
-    # Fall through to ERPNext default
-    return _original_item_query(doctype, txt, searchfield, start, page_len, filters)
+    return _normalize_item_query_rows(rows)
 
 
 @frappe.whitelist()
