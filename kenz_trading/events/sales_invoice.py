@@ -1020,25 +1020,25 @@ def clear_items_cache():
 #     return normalized
 
 
-@frappe.whitelist()
-def custom_item_query(doctype, txt, searchfield, start, page_len, filters):
-    """
-    Override of erpnext.controllers.queries.item_query.
-    Routes sales item queries to our custom function that shows ALL items.
-    Falls through to ERPNext default for everything else (Stock Ledger, reports, etc.)
+# @frappe.whitelist()
+# def custom_item_query(doctype, txt, searchfield, start, page_len, filters):
+#     """
+#     Override of erpnext.controllers.queries.item_query.
+#     Routes sales item queries to our custom function that shows ALL items.
+#     Falls through to ERPNext default for everything else (Stock Ledger, reports, etc.)
 
-    Always normalizes the response so it's compatible with both Link
-    autocomplete and MultiSelectList consumers (e.g. Stock Ledger Items filter).
-    """
-    if isinstance(filters, str):
-        filters = json.loads(filters)
+#     Always normalizes the response so it's compatible with both Link
+#     autocomplete and MultiSelectList consumers (e.g. Stock Ledger Items filter).
+#     """
+#     if isinstance(filters, str):
+#         filters = json.loads(filters)
 
-    if filters and (filters.get("is_sales_item") or filters.get("is_purchase_item")):
-        rows = get_all_sales_items_for_link_field(doctype, txt, searchfield, start, page_len, filters)
-    else:
-        rows = _original_item_query(doctype, txt, searchfield, start, page_len, filters)
+#     if filters and (filters.get("is_sales_item") or filters.get("is_purchase_item")):
+#         rows = get_all_sales_items_for_link_field(doctype, txt, searchfield, start, page_len, filters)
+#     else:
+#         rows = _original_item_query(doctype, txt, searchfield, start, page_len, filters)
 
-    return _normalize_item_query_rows(rows)
+#     return _normalize_item_query_rows(rows)
 
 
 @frappe.whitelist()
