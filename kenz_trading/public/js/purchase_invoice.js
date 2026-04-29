@@ -143,3 +143,31 @@ frappe.ui.form.on("Purchase Invoice Item", {
 // =============================================
 
 // Item search handled by monkey patch on erpnext.controllers.queries.item_query
+
+
+// =============================================
+// AUTO-UNCHECK update_outstanding_for_self ON RETURN
+// =============================================
+
+frappe.ui.form.on("Purchase Invoice", {
+	is_return: function (frm) {
+		_kenz_force_uncheck_outstanding_self_pi(frm);
+	},
+	return_against: function (frm) {
+		_kenz_force_uncheck_outstanding_self_pi(frm);
+	},
+	refresh: function (frm) {
+		_kenz_force_uncheck_outstanding_self_pi(frm);
+	},
+});
+
+function _kenz_force_uncheck_outstanding_self_pi(frm) {
+	if (
+		frm.doc.is_return &&
+		frm.doc.return_against &&
+		frm.doc.custom_payment_mode === "Credit" &&
+		frm.doc.update_outstanding_for_self
+	) {
+		frm.set_value("update_outstanding_for_self", 0);
+	}
+}
