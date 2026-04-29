@@ -1,20 +1,41 @@
 """
-Monkey patches module — currently a no-op.
+Monkey patches applied via the `before_request` hook in hooks.py.
 
-Previously installed:
-  1. erpnext.controllers.queries.item_query -> custom_item_query (showed
-     all items in link-field search).
-  2. frappe.model.document.Document.round_floats_in -> kwargs-tolerant
-     wrapper for older Frappe versions on Frappe Cloud.
+Currently active:
+  - Document.round_floats_in: tolerate unknown kwargs (e.g.
+    `do_not_round_fields`) that newer ERPNext (>=15.100) passes but
+    older Frappe (<=15.95) does not accept. Without this, every Sales
+    Order / Sales Invoice / Purchase Invoice save fails with
+    `TypeError: Document.round_floats_in() got an unexpected keyword
+    argument 'do_not_round_fields'`.
 
-Both have been disabled. The `apply` function is kept so the existing
-`before_request` hook in hooks.py keeps working without raising.
-
-If you need to re-enable a patch, restore the original imports and body
-from git history (commits before 'comment item query') and add the
-matching function definitions back into kenz_trading.events.sales_invoice.
+Disabled (kept here for reference):
+  - erpnext.controllers.queries.item_query override (custom_item_query).
+    Removed because the function definition was deleted from
+    sales_invoice.py. To re-enable, restore the function from git
+    history before the 'comment item query' commits and uncomment the
+    Patch 1 block in `apply()`.
 """
+
+from frappe.model.document import Document
+
+_patched = False
 
 
 def apply():
-    pass
+	global _patched
+	if _patched:
+		return
+
+	# Patch round_floats_in to drop unknown kwargs.
+	# Capture the original ONCE so re-applies don't recurse.
+	original_round_floats_in = Document.round_floats_in
+
+	def _safe_round_floats_in(self, doc, fieldnames=None, **kwargs):
+		# Silently drop kwargs that the installed Frappe doesn't accept
+		# (e.g. do_not_round_fields, introduced in newer Frappe versions).
+		return original_round_floats_in(self, doc, fieldnames=fieldnames)
+
+	Document.round_floats_in = _safe_round_floats_in
+
+	_patched = True
