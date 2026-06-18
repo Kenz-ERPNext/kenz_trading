@@ -221,12 +221,17 @@ doc_events = {
 
 # Request Events
 # ----------------
-# before_request = ["kenz_trading.utils.before_request"]
+# Apply runtime monkey patches before each request and background job.
+# Patches Document.round_floats_in to tolerate the do_not_round_fields
+# kwarg passed by newer ERPNext (>=15.100) against older Frappe (<=15.95).
+before_request = ["kenz_trading.patches.monkey_patches.apply"]
 # after_request = ["kenz_trading.utils.after_request"]
 
 # Job Events
 # ----------
-# before_job = ["kenz_trading.utils.before_job"]
+# Also apply monkey patches in background jobs (e.g. enqueued ZATCA
+# compliance checks) where before_request does not fire.
+before_job = ["kenz_trading.patches.monkey_patches.apply"]
 # after_job = ["kenz_trading.utils.after_job"]
 
 # User Data Protection
