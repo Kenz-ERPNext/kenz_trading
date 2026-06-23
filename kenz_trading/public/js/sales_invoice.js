@@ -100,11 +100,15 @@ frappe.ui.form.on("Sales Invoice", {
     onload: function(frm) {
 
 
-        
+
         // Always show project field regardless of POS mode
         frm.set_df_property('project', 'hidden', 0);
-        // Set default warehouse on form load if update_stock is enabled
-        set_default_warehouse(frm);
+        // Set default warehouse on form load — skip submitted/cancelled docs,
+        // Frappe blocks Source Warehouse change after submit (saw on SI-00597
+        // 2026-06-17: clearing it on open triggered UpdateAfterSubmitError).
+        if (frm.doc.docstatus === 0) {
+            set_default_warehouse(frm);
+        }
 
         set_item_query(frm);
     },
@@ -460,6 +464,12 @@ function default_branch(frm) {
 }
 
 function set_default_warehouse(frm) {
+    // Defensive guard — never mutate Source Warehouse on a submitted (1) or
+    // cancelled (2) invoice. Frappe rejects any change to non-allow-on-submit
+    // fields after docstatus moves off draft, so calling set_value here would
+    // dirty the form and the next Save fails with UpdateAfterSubmitError.
+    if (frm.doc.docstatus !== 0) return;
+
     if (frm.doc.update_stock && frm.doc.company) {
         frappe.call({
             method: "kenz_trading.events.warehouse.get_default_warehouse",
