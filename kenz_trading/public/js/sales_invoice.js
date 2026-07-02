@@ -79,8 +79,13 @@ frappe.ui.form.on("Sales Invoice", {
         // Always show project field regardless of POS mode
         frm.set_df_property('project', 'hidden', 0);
     },
-    customer: function (frm) {
-        frm.set_value("custom_session_user", frappe.session.user);
+    customer: function(frm) {
+        if (frm.doc.docstatus !== 0) return;
+
+        if (frm.doc.custom_session_user !== frappe.session.user) {
+            frm.set_value("custom_session_user", frappe.session.user);
+        }
+
         default_branch(frm);
     },
     setup: function (frm) {
@@ -99,12 +104,11 @@ frappe.ui.form.on("Sales Invoice", {
 
     onload: function(frm) {
 
+        frm.set_df_property("project", "hidden", 0);
 
-        
-        // Always show project field regardless of POS mode
-        frm.set_df_property('project', 'hidden', 0);
-        // Set default warehouse on form load if update_stock is enabled
-        set_default_warehouse(frm);
+        if (frm.doc.docstatus === 0) {
+            set_default_warehouse(frm);
+        }
 
         set_item_query(frm);
     },
@@ -451,8 +455,10 @@ function default_branch(frm) {
         args: {
             user: frappe.session.user,
         },
-        callback: function (r) {
-            if (r.message) {
+        callback: function(r) {
+            if (frm.doc.docstatus !== 0) return;
+
+            if (r.message && frm.doc.branch !== r.message) {
                 frm.set_value("branch", r.message);
             }
         },
@@ -460,6 +466,12 @@ function default_branch(frm) {
 }
 
 function set_default_warehouse(frm) {
+
+    // Don't modify submitted or cancelled documents
+    if (frm.doc.docstatus !== 0) {
+        return;
+    }
+
     if (frm.doc.update_stock && frm.doc.company) {
         frappe.call({
             method: "kenz_trading.events.warehouse.get_default_warehouse",
@@ -467,27 +479,22 @@ function set_default_warehouse(frm) {
                 company: frm.doc.company
             },
             callback: function(r) {
-                if (r.message) {
-                    frm.set_value('set_warehouse', r.message);
-                    frm.refresh_field('set_warehouse');
-                } else {
-                    // Clear warehouse if no default found
-                    if (!frm.doc.set_warehouse) {
-                        frappe.show_alert({
-                            message: __('No default warehouse found. Please set a warehouse with "Is Default" checked.'),
-                            indicator: 'orange'
-                        }, 5);
-                    }
+                if (r.message && frm.doc.set_warehouse !== r.message) {
+                    frm.set_value("set_warehouse", r.message);
+                } else if (!r.message && !frm.doc.set_warehouse) {
+                    frappe.show_alert({
+                        message: __('No default warehouse found. Please set a warehouse with "Is Default" checked.'),
+                        indicator: 'orange'
+                    }, 5);
                 }
             }
         });
-    } else if (!frm.doc.update_stock) {
-        // Clear warehouse when update_stock is disabled
-        frm.set_value('set_warehouse', '');
-        frm.refresh_field('set_warehouse');
+    } else {
+        if (frm.doc.set_warehouse) {
+            frm.set_value("set_warehouse", "");
+        }
     }
 }
-
                           //////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////// ITEM TABLE /////////////////////////////////////////////////
