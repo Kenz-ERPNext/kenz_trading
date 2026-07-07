@@ -80,8 +80,13 @@ frappe.ui.form.on("Sales Invoice", {
         frm.set_df_property('incoterm', 'hidden', 1);
 
     },
-    customer: function (frm) {
-        frm.set_value("custom_session_user", frappe.session.user);
+    customer: function(frm) {
+        if (frm.doc.docstatus !== 0) return;
+
+        if (frm.doc.custom_session_user !== frappe.session.user) {
+            frm.set_value("custom_session_user", frappe.session.user);
+        }
+
         default_branch(frm);
     },
 
@@ -154,9 +159,8 @@ frappe.ui.form.on("Sales Invoice", {
                     // Get the default Sales Taxes and Charges Template
                     frappe.db.get_single_value('Kenza Settings', 'sales_taxes_and_charges_template')
                         .then((template) => {
-                            if (template) {
-                                frm.set_value('taxes_and_charges', template);
-                                frm.refresh_field('taxes_and_charges');
+                            if (template && frm.doc.taxes_and_charges !== template) {
+                                frm.set_value("taxes_and_charges", template);
                             }
                         });
                 }
@@ -222,8 +226,7 @@ frappe.ui.form.on("Sales Invoice", {
                 field: "enable_auto_create_dn"
             },
             callback: function(r) {
-                if (r.message) {
-                    frm.set_df_property("update_stock", "read_only", 1);
+                if (r.message && frm.doc.update_stock) {
                     frm.set_value("update_stock", 0);
                 }
             }
@@ -454,7 +457,9 @@ frappe.ui.form.on("Sales Invoice", {
 
 function set_pos_value(frm) {
     // Both Cash and Credit are non-POS. Cash creates a separate Payment Entry on submit.
-    frm.set_value("is_pos", 0);
+    if (frm.doc.is_pos !== 0) {
+        frm.set_value("is_pos", 0);
+    }
     clear_pos_payments(frm);
 }
 
@@ -480,8 +485,10 @@ function default_branch(frm) {
         args: {
             user: frappe.session.user,
         },
-        callback: function (r) {
-            if (r.message) {
+        callback: function(r) {
+            if (frm.doc.docstatus !== 0) return;
+
+            if (r.message && frm.doc.branch !== r.message) {
                 frm.set_value("branch", r.message);
             }
         },
@@ -496,9 +503,10 @@ function set_default_warehouse(frm) {
                 company: frm.doc.company
             },
             callback: function(r) {
-                if (r.message) {
-                    frm.set_value('set_warehouse', r.message);
-                    frm.refresh_field('set_warehouse');
+                if (frm.doc.docstatus !== 0) return;
+
+                if (r.message && frm.doc.set_warehouse !== r.message) {
+                    frm.set_value("set_warehouse", r.message);
                 } else {
                     // Clear warehouse if no default found
                     if (!frm.doc.set_warehouse) {
@@ -510,9 +518,11 @@ function set_default_warehouse(frm) {
                 }
             }
         });
-    } else if (!frm.doc.update_stock) {
+    } else {
         // Clear warehouse when update_stock is disabled
-        frm.set_value('set_warehouse', '');
+        if (!frm.doc.update_stock && frm.doc.set_warehouse) {
+            frm.set_value("set_warehouse", "");
+        }
         frm.refresh_field('set_warehouse');
     }
 }
