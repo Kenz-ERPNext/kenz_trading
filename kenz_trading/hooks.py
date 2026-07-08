@@ -189,6 +189,7 @@ doc_events = {
         "validate": [
             "kenz_trading.events.sales_invoice.validate_item_branch",
             "kenz_trading.events.sales_invoice.force_uncheck_update_outstanding_for_self",
+            "kenz_trading.events.sales_invoice.set_return_additional_references",
         ],
         "has_permission": "kenz_trading.events.item.item_has_permission"
 

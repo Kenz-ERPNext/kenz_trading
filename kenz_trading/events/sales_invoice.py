@@ -46,6 +46,38 @@ def apply_payment_mode_rules(doc, method=None):
         doc.set("payments", [])
 
 
+def set_return_additional_references(doc, method=None):
+    """
+    Fill ksa_compliance's ZATCA return references for Saudi Arabia returns.
+
+    custom_return_against_additional_references is a Table MultiSelect
+    (child doctype: ZATCA Return Against Reference), so it must hold child
+    rows. Assigning a plain string crashes set_title_field -> as_dict()
+    with "'str' object has no attribute 'as_dict'", so any string value
+    left behind by another app is repaired into a child row here.
+    """
+    if not doc.get("is_return"):
+        return
+
+    field = "custom_return_against_additional_references"
+    if not doc.meta.get_field(field):
+        return
+
+    if frappe.db.get_value("Company", doc.company, "country") != "Saudi Arabia":
+        return
+
+    value = doc.get(field)
+    if isinstance(value, str):
+        invoice_name = value
+        doc.set(field, [])
+        if invoice_name:
+            doc.append(field, {"sales_invoice": invoice_name})
+        value = doc.get(field)
+
+    if doc.return_against and not value:
+        doc.append(field, {"sales_invoice": doc.return_against})
+
+
 
 
 
