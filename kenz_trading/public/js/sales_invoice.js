@@ -10,10 +10,10 @@ function apply_items_table_height(frm) {
     const max_rows = 15;
     const rows = Math.min(Math.max(item_count + 1, min_rows), max_rows);
     const height = rows * row_height;
-    frm.fields_dict.items.grid.wrapper.find('.rows').css({
-    "max-height": height + "px",
-    "overflow-y": "auto"
-});
+    // frm.fields_dict.items.grid.wrapper.find('.rows').css({
+    // "max-height": height + "px",
+    // "overflow-y": "auto"
+// });
 }
 
 frappe.ui.form.on("Sales Invoice", {
