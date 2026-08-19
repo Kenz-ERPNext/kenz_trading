@@ -2,9 +2,8 @@
 // For license information, please see license.txt
 
 frappe.query_reports["Day Business Summary"] = {
-	"filters": [
-
-		{
+    filters: [
+        {
             fieldname: "company",
             label: __("Company"),
             fieldtype: "Link",
@@ -20,18 +19,10 @@ frappe.query_reports["Day Business Summary"] = {
             default: frappe.datetime.get_today()
         },
         {
-            fieldname: "branch",
-            label: __("Branch"),
-            fieldtype: "Link",
-            options: "Branch"
-        },
-        {
             fieldname: "user",
             label: __("User"),
             fieldtype: "Link",
             options: "User"
         }
-
-	]
+    ]
 };
- 
