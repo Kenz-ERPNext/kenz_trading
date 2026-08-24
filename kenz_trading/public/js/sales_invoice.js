@@ -665,27 +665,14 @@ frappe.ui.form.on("Sales Invoice Item", {
     },
 
     rate: function(frm, cdt, cdn) {
-        let row = locals[cdt][cdn];
-         // store manual rate
-        row.__manual_rate = row.rate;
-
-        // wait for ERPNext async pricing to finish
-        setTimeout(() => {
-            if (row.rate !== row.__manual_rate) {
-                row.rate = row.__manual_rate;
-                frm.refresh_field("items");
-            }
-            calculate_item_tax_total(frm, cdt, cdn);
-        }, 150);
+        calculate_item_tax_total(frm, cdt, cdn);
 
         validate_item_rate(frm, cdt, cdn);
         validate_last_invoice_rate(frm, cdt, cdn);
     },
 
     qty: function(frm, cdt, cdn) {
-        setTimeout(() => {
-            calculate_item_tax_total(frm, cdt, cdn);
-        }, 150);
+        calculate_item_tax_total(frm, cdt, cdn);
     },
 
 });
@@ -734,7 +721,12 @@ function calculate_item_tax_total(frm, cdt, cdn) {
 
     let total_with_tax = rate + tax_amount;
 
-    frappe.model.set_value(cdt, cdn, "custom_item_total_with_tax", total_with_tax);
+    frappe.model.set_value(
+        cdt,
+        cdn,
+        "custom_item_total_with_tax",
+        total_with_tax
+    );
 }
 
 
