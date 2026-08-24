@@ -660,21 +660,31 @@ frappe.ui.form.on("Sales Invoice Item", {
             }
         });
 
-        calculate_item_tax_total(frm, cdt, cdn);
-
     },
 
-    rate: function(frm, cdt, cdn) {
-        calculate_item_tax_total(frm, cdt, cdn);
+    rate: async function(frm, cdt, cdn) {
 
-        validate_item_rate(frm, cdt, cdn);
-        validate_last_invoice_rate(frm, cdt, cdn);
+        // Wait for ERPNext pricing/rate calculations
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Validate rate first
+        await validate_item_rate(frm, cdt, cdn);
+        await validate_last_invoice_rate(frm, cdt, cdn);
+
+        // Re-read the row AFTER validation
+        calculate_item_tax_total(frm, cdt, cdn);
     },
 
     qty: function(frm, cdt, cdn) {
-        calculate_item_tax_total(frm, cdt, cdn);
-    },
 
+        // Qty is normally immediately available
+        calculate_item_tax_total(frm, cdt, cdn);
+
+        // Run once more after ERPNext finishes its calculations
+        setTimeout(() => {
+            calculate_item_tax_total(frm, cdt, cdn);
+        }, 100);
+    },
 });
 
 
@@ -708,13 +718,13 @@ frappe.ui.form.on("Sales Invoice Item", {
 
 
 function calculate_item_tax_total(frm, cdt, cdn) {
+
     let row = locals[cdt][cdn];
 
-    if (!row.item_code) return;
+    if (!row || !row.item_code) return;
 
     let rate = flt(row.rate || 0);
 
-    // Fixed 15% tax
     let tax_percent = 15;
 
     let tax_amount = (rate * tax_percent) / 100;
@@ -725,10 +735,9 @@ function calculate_item_tax_total(frm, cdt, cdn) {
         cdt,
         cdn,
         "custom_item_total_with_tax",
-        total_with_tax
+        flt(total_with_tax)
     );
 }
-
 
 
 
