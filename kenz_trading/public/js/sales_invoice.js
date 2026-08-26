@@ -3,6 +3,9 @@
 
 let item_uoms = {};
 
+let rate_validation_timers = {};
+let rate_validation_tokens = {};
+
 frappe.ui.form.on("Sales Invoice", {
 
 
@@ -534,40 +537,230 @@ function set_default_warehouse(frm) {
                         ///////////////////////////////
 
 
+// frappe.ui.form.on("Sales Invoice Item", {
+
+
+//     item_code: function (frm, cdt, cdn) {
+//         let row = locals[cdt][cdn];
+
+//         if (!row.item_code) return;
+
+//         // Fetch Item details for UOM handling only
+//         frappe.call({
+//             method: "frappe.client.get",
+//             args: { doctype: "Item", name: row.item_code },
+//             callback: function(r) {
+//                 if (r.message) {
+//                     let allowed_uoms = (r.message.uoms || []).map(u => u.uom);
+//                     item_uoms[row.item_code] = allowed_uoms;
+
+//                     let grid_row = frm.fields_dict["items"].grid.grid_rows_by_docname[cdn];
+//                     if (grid_row) {
+//                         grid_row.get_field("uom").get_query = () => ({
+//                             filters: [["UOM", "name", "in", allowed_uoms]]
+//                         });
+//                     }
+
+//                     // Reset UOM if invalid
+//                     if (row.uom && !allowed_uoms.includes(row.uom)) {
+//                         frappe.model.set_value(cdt, cdn, "uom", "");
+//                     }
+
+//                     frappe.model.set_value(cdt,cdn,"custom_rack_number",
+//                     r.message.custom_rack_number || ""
+//                 );
+
+//                     // Set item tax template from Item master
+//                     if (r.message.item_tax_template) {
+//                         frappe.model.set_value(
+//                             cdt,
+//                             cdn,
+//                             "item_tax_template",
+//                             r.message.item_tax_template
+//                         );
+//                     }
+
+//                 }
+//             }
+//         });
+
+
+
+//         frappe.call({
+//             method: "frappe.client.get_value",
+//             args: {
+//                 doctype: "Kenza Settings",
+//                 fieldname: "show_item_variant_table",
+//                 filters: {}
+//             },
+//             callback: function (res) {
+//                 // Only continue if checkbox is checked
+//                 if (!res.message || !res.message.show_item_variant_table) {
+//                     return;
+//                 }
+
+//                 // YOUR EXISTING FUNCTION — runs only if checkbox is enabled
+//                 frappe.call({
+//                     method: "kenz_trading.events.sales_invoice.get_last_variant_transactions",
+//                     args: {
+//                         customer: frm.doc.customer,
+//                         item_code: row.item_code
+//                     },
+//                     callback: function (r) {
+
+//                         if (!r.message || r.message.length === 0) {
+//                             frm.set_df_property("last_variant_transaction", "options", "");
+//                             return;
+//                         }
+
+//                         let html = `
+//                             <div style="max-height:300px; overflow:auto;">
+//                             <table class="table table-bordered table-sm" style="margin:0;">
+//                                 <thead style="background:#f5f5f5;">
+//                                     <tr>
+//                                         <th>Date</th>
+//                                         <th>Invoice No</th>
+//                                         <th>Variant</th>
+//                                         <th>Rate</th>
+//                                     </tr>
+//                                 </thead>
+//                                 <tbody>`;
+
+//                         r.message.forEach(d => {
+//                             html += `
+//                                 <tr>
+//                                     <td>${d.submitted_date || ""}</td>
+//                                     <td>${d.s_invoice_no || ""}</td>
+//                                     <td>${d.variant_name || ""}</td>
+//                                     <td>${d.rate || ""}</td>
+//                                 </tr>`;
+//                         });
+
+//                         html += `</tbody></table></div>`;
+
+//                         // Set to HTML field
+//                         frm.set_df_property("last_variant_transaction", "options", html);
+
+//                         // Show popup
+//                         frappe.msgprint({
+//                             title: __("Last Variant Transactions"),
+//                             message: html,
+//                             wide: true
+//                         });
+
+//                     }
+//                 });
+//             }
+//         });
+
+//         load_item_transaction_details(row.item_code,frm)
+//         validate_item_rate(frm, cdt, cdn);
+//         validate_last_invoice_rate(frm, cdt, cdn);
+
+//         build_stock_table(frm, row).then(html => {
+//             if (frm.fields_dict.custom_stock_details) {
+//                 $(frm.fields_dict.custom_stock_details.wrapper).html(html);
+//             }
+//         });
+
+//     },
+
+//     rate: async function(frm, cdt, cdn) {
+
+//         // Wait for ERPNext pricing/rate calculations
+//         await new Promise(resolve => setTimeout(resolve, 100));
+
+//         // Validate rate first
+//         await validate_item_rate(frm, cdt, cdn);
+//         await validate_last_invoice_rate(frm, cdt, cdn);
+
+//         // Re-read the row AFTER validation
+//         calculate_item_tax_total(frm, cdt, cdn);
+//     },
+
+//     qty: function(frm, cdt, cdn) {
+
+//         // Qty is normally immediately available
+//         calculate_item_tax_total(frm, cdt, cdn);
+
+//         // Run once more after ERPNext finishes its calculations
+//         setTimeout(() => {
+//             calculate_item_tax_total(frm, cdt, cdn);
+//         }, 100);
+//     },
+// });
+
+
+
 frappe.ui.form.on("Sales Invoice Item", {
 
+    item_code: function(frm, cdt, cdn) {
 
-    item_code: function (frm, cdt, cdn) {
         let row = locals[cdt][cdn];
 
         if (!row.item_code) return;
 
-        // Fetch Item details for UOM handling only
+        // Store the item code for this row
+        row.__kenz_item_code_loading = true;
+
+        // -------------------------------------------------
+        // Your existing Item fetch
+        // -------------------------------------------------
+
         frappe.call({
             method: "frappe.client.get",
-            args: { doctype: "Item", name: row.item_code },
+            args: {
+                doctype: "Item",
+                name: row.item_code
+            },
             callback: function(r) {
+
+                let current_row = locals[cdt][cdn];
+
+                if (!current_row || current_row.item_code !== row.item_code) {
+                    return;
+                }
+
                 if (r.message) {
-                    let allowed_uoms = (r.message.uoms || []).map(u => u.uom);
+
+                    let allowed_uoms =
+                        (r.message.uoms || []).map(u => u.uom);
+
                     item_uoms[row.item_code] = allowed_uoms;
 
-                    let grid_row = frm.fields_dict["items"].grid.grid_rows_by_docname[cdn];
+                    let grid_row =
+                        frm.fields_dict["items"].grid.grid_rows_by_docname[cdn];
+
                     if (grid_row) {
                         grid_row.get_field("uom").get_query = () => ({
-                            filters: [["UOM", "name", "in", allowed_uoms]]
+                            filters: [
+                                ["UOM", "name", "in", allowed_uoms]
+                            ]
                         });
                     }
 
-                    // Reset UOM if invalid
-                    if (row.uom && !allowed_uoms.includes(row.uom)) {
-                        frappe.model.set_value(cdt, cdn, "uom", "");
+                    // Only clear invalid UOM
+                    if (
+                        current_row.uom &&
+                        !allowed_uoms.includes(current_row.uom)
+                    ) {
+                        frappe.model.set_value(
+                            cdt,
+                            cdn,
+                            "uom",
+                            ""
+                        );
                     }
 
-                    frappe.model.set_value(cdt,cdn,"custom_rack_number",
-                    r.message.custom_rack_number || ""
-                );
+                    // Rack number
+                    frappe.model.set_value(
+                        cdt,
+                        cdn,
+                        "custom_rack_number",
+                        r.message.custom_rack_number || ""
+                    );
 
-                    // Set item tax template from Item master
+                    // Item tax template
                     if (r.message.item_tax_template) {
                         frappe.model.set_value(
                             cdt,
@@ -576,12 +769,21 @@ frappe.ui.form.on("Sales Invoice Item", {
                             r.message.item_tax_template
                         );
                     }
+                }
 
+                // Item loading completed
+                let latest_row = locals[cdt][cdn];
+
+                if (latest_row) {
+                    latest_row.__kenz_item_code_loading = false;
                 }
             }
         });
 
 
+        // -------------------------------------------------
+        // Variant transaction
+        // -------------------------------------------------
 
         frappe.call({
             method: "frappe.client.get_value",
@@ -590,30 +792,40 @@ frappe.ui.form.on("Sales Invoice Item", {
                 fieldname: "show_item_variant_table",
                 filters: {}
             },
-            callback: function (res) {
-                // Only continue if checkbox is checked
-                if (!res.message || !res.message.show_item_variant_table) {
+            callback: function(res) {
+
+                if (
+                    !res.message ||
+                    !res.message.show_item_variant_table
+                ) {
                     return;
                 }
 
-                // YOUR EXISTING FUNCTION — runs only if checkbox is enabled
                 frappe.call({
-                    method: "kenz_trading.events.sales_invoice.get_last_variant_transactions",
+                    method:
+                        "kenz_trading.events.sales_invoice.get_last_variant_transactions",
                     args: {
                         customer: frm.doc.customer,
                         item_code: row.item_code
                     },
-                    callback: function (r) {
+                    callback: function(r) {
 
-                        if (!r.message || r.message.length === 0) {
-                            frm.set_df_property("last_variant_transaction", "options", "");
+                        if (
+                            !r.message ||
+                            r.message.length === 0
+                        ) {
+                            frm.set_df_property(
+                                "last_variant_transaction",
+                                "options",
+                                ""
+                            );
                             return;
                         }
 
                         let html = `
                             <div style="max-height:300px; overflow:auto;">
-                            <table class="table table-bordered table-sm" style="margin:0;">
-                                <thead style="background:#f5f5f5;">
+                            <table class="table table-bordered table-sm">
+                                <thead>
                                     <tr>
                                         <th>Date</th>
                                         <th>Invoice No</th>
@@ -621,72 +833,183 @@ frappe.ui.form.on("Sales Invoice Item", {
                                         <th>Rate</th>
                                     </tr>
                                 </thead>
-                                <tbody>`;
+                                <tbody>
+                        `;
 
                         r.message.forEach(d => {
+
                             html += `
                                 <tr>
                                     <td>${d.submitted_date || ""}</td>
                                     <td>${d.s_invoice_no || ""}</td>
                                     <td>${d.variant_name || ""}</td>
                                     <td>${d.rate || ""}</td>
-                                </tr>`;
+                                </tr>
+                            `;
                         });
 
-                        html += `</tbody></table></div>`;
+                        html += `
+                                </tbody>
+                            </table>
+                            </div>
+                        `;
 
-                        // Set to HTML field
-                        frm.set_df_property("last_variant_transaction", "options", html);
+                        frm.set_df_property(
+                            "last_variant_transaction",
+                            "options",
+                            html
+                        );
 
-                        // Show popup
                         frappe.msgprint({
                             title: __("Last Variant Transactions"),
                             message: html,
                             wide: true
                         });
-
                     }
                 });
             }
         });
 
-        load_item_transaction_details(row.item_code,frm)
-        validate_item_rate(frm, cdt, cdn);
-        validate_last_invoice_rate(frm, cdt, cdn);
+
+        // -------------------------------------------------
+        // Other information
+        // -------------------------------------------------
+
+        load_item_transaction_details(row.item_code, frm);
 
         build_stock_table(frm, row).then(html => {
-            if (frm.fields_dict.custom_stock_details) {
-                $(frm.fields_dict.custom_stock_details.wrapper).html(html);
+
+            if (
+                frm.fields_dict.custom_stock_details
+            ) {
+                $(frm.fields_dict.custom_stock_details.wrapper)
+                    .html(html);
             }
         });
 
     },
 
-    rate: async function(frm, cdt, cdn) {
 
-        // Wait for ERPNext pricing/rate calculations
-        await new Promise(resolve => setTimeout(resolve, 100));
+    // =====================================================
+    // RATE
+    // =====================================================
 
-        // Validate rate first
-        await validate_item_rate(frm, cdt, cdn);
-        await validate_last_invoice_rate(frm, cdt, cdn);
+    rate: function(frm, cdt, cdn) {
 
-        // Re-read the row AFTER validation
-        calculate_item_tax_total(frm, cdt, cdn);
+        let row = locals[cdt][cdn];
+
+        if (!row) return;
+
+        /*
+         * Generate a unique token for this edit.
+         *
+         * If user changes rate again before the previous
+         * validation finishes, the previous validation
+         * becomes invalid.
+         */
+
+        let token = Date.now() + Math.random();
+
+        rate_validation_tokens[cdn] = token;
+
+        // Clear previous timer
+        if (rate_validation_timers[cdn]) {
+            clearTimeout(rate_validation_timers[cdn]);
+        }
+
+        // Wait until user stops typing/changing rate
+        rate_validation_timers[cdn] = setTimeout(async function() {
+
+            let current_row = locals[cdt][cdn];
+
+            if (!current_row) return;
+
+            let current_rate = flt(current_row.rate);
+
+            // Validate minimum / maximum
+            await validate_item_rate(
+                frm,
+                cdt,
+                cdn,
+                token
+            );
+
+            // Check if another rate edit happened
+            if (rate_validation_tokens[cdn] !== token) {
+                return;
+            }
+
+            // Validate last invoice rate
+            await validate_last_invoice_rate(
+                frm,
+                cdt,
+                cdn,
+                token
+            );
+
+            // Check again
+            if (rate_validation_tokens[cdn] !== token) {
+                return;
+            }
+
+            let latest_row = locals[cdt][cdn];
+
+            if (!latest_row) return;
+
+            // Make sure user hasn't changed the rate
+            // while the async calls were running
+            if (flt(latest_row.rate) !== current_rate) {
+                return;
+            }
+
+            calculate_item_tax_total(
+                frm,
+                cdt,
+                cdn
+            );
+
+        }, 300);
     },
+
+
+    // =====================================================
+    // QTY
+    // =====================================================
 
     qty: function(frm, cdt, cdn) {
 
-        // Qty is normally immediately available
-        calculate_item_tax_total(frm, cdt, cdn);
+        let row = locals[cdt][cdn];
 
-        // Run once more after ERPNext finishes its calculations
-        setTimeout(() => {
-            calculate_item_tax_total(frm, cdt, cdn);
-        }, 100);
-    },
+        if (!row) return;
+
+        calculate_item_tax_total(
+            frm,
+            cdt,
+            cdn
+        );
+
+        /*
+         * Do not immediately run another calculation.
+         *
+         * ERPNext itself performs quantity calculations
+         * asynchronously.
+         */
+        setTimeout(function() {
+
+            let latest_row = locals[cdt][cdn];
+
+            if (!latest_row) return;
+
+            calculate_item_tax_total(
+                frm,
+                cdt,
+                cdn
+            );
+
+        }, 300);
+    }
+
 });
-
 
 // function calculate_item_tax_total(frm, cdt, cdn) {
 //     let row = locals[cdt][cdn];
@@ -723,13 +1046,14 @@ function calculate_item_tax_total(frm, cdt, cdn) {
 
     if (!row || !row.item_code) return;
 
+    let qty = flt(row.qty || 0);
     let rate = flt(row.rate || 0);
 
-    let tax_percent = 15;
+    let amount = qty * rate;
 
-    let tax_amount = (rate * tax_percent) / 100;
+    let tax_amount = (amount * 15) / 100;
 
-    let total_with_tax = rate + tax_amount;
+    let total_with_tax = amount + tax_amount;
 
     frappe.model.set_value(
         cdt,
@@ -1477,40 +1801,137 @@ async function get_item_limits(item_code) {
 
 
 
-async function validate_item_rate(frm, cdt, cdn) {
+// async function validate_item_rate(frm, cdt, cdn) {
+//     const enabled = await is_rate_validation_enabled();
+//     if (!enabled) return;  // DO NOTHING if disabled
+
+//     let row = locals[cdt][cdn];
+//     if (!row.item_code || !row.rate) return;
+
+//     const limits = await get_item_limits(row.item_code);
+//     if (!limits) return;
+
+//     if (limits.min && flt(row.rate) < flt(limits.min)) {
+//         frappe.msgprint({
+//             title: __('Invalid Rate'),
+//             message: __(`Rate for <b>${row.item_code}</b> cannot be less than <b>${limits.min}</b>`),
+//             indicator: 'red'
+//         });
+
+//         row.rate = limits.min;
+//         frm.refresh_field("items");
+//     }
+
+//     if (limits.max && flt(row.rate) > flt(limits.max)) {
+//         frappe.msgprint({
+//             title: __('Invalid Rate'),
+//             message: __(`Rate for <b>${row.item_code}</b> cannot exceed <b>${limits.max}</b>`),
+//             indicator: 'red'
+//         });
+
+//         row.rate = limits.max;
+//         frm.refresh_field("items");
+//     }
+// }
+
+async function validate_item_rate(
+    frm,
+    cdt,
+    cdn,
+    validation_token = null
+) {
+
     const enabled = await is_rate_validation_enabled();
-    if (!enabled) return;  // DO NOTHING if disabled
+
+    if (!enabled) return;
+
+    // Check whether this validation is still current
+    if (
+        validation_token !== null &&
+        rate_validation_tokens[cdn] !== validation_token
+    ) {
+        return;
+    }
 
     let row = locals[cdt][cdn];
-    if (!row.item_code || !row.rate) return;
+
+    if (!row || !row.item_code || !row.rate) {
+        return;
+    }
+
+    // Remember the rate user entered
+    let entered_rate = flt(row.rate);
 
     const limits = await get_item_limits(row.item_code);
+
+    // Check again after async request
+    if (
+        validation_token !== null &&
+        rate_validation_tokens[cdn] !== validation_token
+    ) {
+        return;
+    }
+
+    let current_row = locals[cdt][cdn];
+
+    if (!current_row) return;
+
+    /*
+     * IMPORTANT:
+     *
+     * If user changed rate while the request was running,
+     * don't overwrite the new value.
+     */
+    if (flt(current_row.rate) !== entered_rate) {
+        return;
+    }
+
     if (!limits) return;
 
-    if (limits.min && flt(row.rate) < flt(limits.min)) {
+
+    if (
+        limits.min &&
+        flt(current_row.rate) < flt(limits.min)
+    ) {
+
         frappe.msgprint({
-            title: __('Invalid Rate'),
-            message: __(`Rate for <b>${row.item_code}</b> cannot be less than <b>${limits.min}</b>`),
-            indicator: 'red'
+            title: __("Invalid Rate"),
+            message: __(
+                `Rate for <b>${current_row.item_code}</b> cannot be less than <b>${limits.min}</b>`
+            ),
+            indicator: "red"
         });
 
-        row.rate = limits.min;
-        frm.refresh_field("items");
+        frappe.model.set_value(
+            cdt,
+            cdn,
+            "rate",
+            limits.min
+        );
     }
 
-    if (limits.max && flt(row.rate) > flt(limits.max)) {
+
+    if (
+        limits.max &&
+        flt(current_row.rate) > flt(limits.max)
+    ) {
+
         frappe.msgprint({
-            title: __('Invalid Rate'),
-            message: __(`Rate for <b>${row.item_code}</b> cannot exceed <b>${limits.max}</b>`),
-            indicator: 'red'
+            title: __("Invalid Rate"),
+            message: __(
+                `Rate for <b>${current_row.item_code}</b> cannot exceed <b>${limits.max}</b>`
+            ),
+            indicator: "red"
         });
 
-        row.rate = limits.max;
-        frm.refresh_field("items");
+        frappe.model.set_value(
+            cdt,
+            cdn,
+            "rate",
+            limits.max
+        );
     }
 }
-
-
  
  
 
@@ -1546,25 +1967,103 @@ async function get_last_sales_rate(item_code) {
 // VALIDATE LAST SALES RATE
 // -----------------------------
 
-async function validate_last_invoice_rate(frm, cdt, cdn) {
+// async function validate_last_invoice_rate(frm, cdt, cdn) {
+//     const enabled = await is_last_invoice_rate_enabled();
+//     if (!enabled) return;  // skip if setting is disabled
+
+//     let row = locals[cdt][cdn];
+//     if (!row.item_code || !row.rate) return;
+
+//     const last_rate = await get_last_sales_rate(row.item_code);
+//     if (!last_rate) return; // no previous sales, skip
+
+//     if (flt(row.rate) < flt(last_rate)) {
+//         frappe.msgprint({
+//             title: __('Invalid Rate'),
+//             message: __(`Rate for <b>${row.item_code}</b> cannot be less than the last sales invoice rate <b>${last_rate}</b>`),
+//             indicator: 'red'
+//         });
+
+//         row.rate = last_rate;
+//         frm.refresh_field("items");
+//     }
+// }
+
+
+
+async function validate_last_invoice_rate(
+    frm,
+    cdt,
+    cdn,
+    validation_token = null
+) {
+
     const enabled = await is_last_invoice_rate_enabled();
-    if (!enabled) return;  // skip if setting is disabled
+
+    if (!enabled) return;
+
+    // Check whether this validation is still current
+    if (
+        validation_token !== null &&
+        rate_validation_tokens[cdn] !== validation_token
+    ) {
+        return;
+    }
 
     let row = locals[cdt][cdn];
-    if (!row.item_code || !row.rate) return;
 
-    const last_rate = await get_last_sales_rate(row.item_code);
-    if (!last_rate) return; // no previous sales, skip
+    if (!row || !row.item_code || !row.rate) {
+        return;
+    }
 
-    if (flt(row.rate) < flt(last_rate)) {
+    // Remember what user entered
+    let entered_rate = flt(row.rate);
+
+    const last_rate = await get_last_sales_rate(
+        row.item_code
+    );
+
+    // Another rate edit may have happened
+    if (
+        validation_token !== null &&
+        rate_validation_tokens[cdn] !== validation_token
+    ) {
+        return;
+    }
+
+    let current_row = locals[cdt][cdn];
+
+    if (!current_row) return;
+
+    /*
+     * VERY IMPORTANT
+     *
+     * Don't overwrite a rate that the user changed
+     * while the API request was running.
+     */
+    if (flt(current_row.rate) !== entered_rate) {
+        return;
+    }
+
+    if (!last_rate) return;
+
+
+    if (flt(current_row.rate) < flt(last_rate)) {
+
         frappe.msgprint({
-            title: __('Invalid Rate'),
-            message: __(`Rate for <b>${row.item_code}</b> cannot be less than the last sales invoice rate <b>${last_rate}</b>`),
-            indicator: 'red'
+            title: __("Invalid Rate"),
+            message: __(
+                `Rate for <b>${current_row.item_code}</b> cannot be less than the last sales invoice rate <b>${last_rate}</b>`
+            ),
+            indicator: "red"
         });
 
-        row.rate = last_rate;
-        frm.refresh_field("items");
+        frappe.model.set_value(
+            cdt,
+            cdn,
+            "rate",
+            last_rate
+        );
     }
 }
 
