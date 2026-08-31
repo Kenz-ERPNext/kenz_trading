@@ -257,7 +257,9 @@ before_request = ["kenz_trading.patches.monkey_patches.apply"]
 
 # Job Events
 # ----------
-# before_job = ["kenz_trading.utils.before_job"]
+# Also apply monkey patches in background jobs (e.g. enqueued ZATCA
+# compliance checks) where before_request does not fire.
+before_job = ["kenz_trading.patches.monkey_patches.apply"]
 # after_job = ["kenz_trading.utils.after_job"]
 
 # User Data Protection
