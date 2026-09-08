@@ -82,6 +82,15 @@ def set_return_additional_references(doc, method=None):
 
 
 
+def _is_zatca_compliance_invoice(name):
+    """True while ksa_compliance is running its compliance check on this invoice."""
+    try:
+        from ksa_compliance.standard_doctypes.sales_invoice import IGNORED_INVOICES
+    except ImportError:
+        return False
+    return name in IGNORED_INVOICES
+
+
 def create_payment_entry_for_cash(doc, method=None):
     """
     Auto-create Payment Entry for Cash and Bank invoices on submit.
@@ -100,6 +109,17 @@ def create_payment_entry_for_cash(doc, method=None):
     if payment_mode not in ("Cash", "Bank"):
         return
 
+    # ksa_compliance's "Perform Compliance Checks" submits throw-away invoices
+    # (created server-side, so the Select defaults to "Cash") and rolls them back.
+    # They must never produce a Payment Entry.
+    if _is_zatca_compliance_invoice(doc.name):
+        return
+
+    # custom_payment_mode is only a Cash/Credit label; the actual Mode of Payment
+    # record is the custom_mode_of_payment link (sites name it freely, e.g.
+    # "CASHBOOK KENZTECH"). Fall back to the label for sites that named it "Cash".
+    mode_of_payment = doc.get("custom_mode_of_payment") or payment_mode
+
     # Prevent duplicate Payment Entry
     if frappe.db.exists(
         "Payment Entry Reference",
@@ -111,20 +131,20 @@ def create_payment_entry_for_cash(doc, method=None):
     ):
         return
 
-    if not frappe.db.exists("Mode of Payment", payment_mode):
+    if not frappe.db.exists("Mode of Payment", mode_of_payment):
         frappe.throw(
             _("Please select a valid Mode of Payment for {0} invoices.").format(payment_mode)
         )
 
     paid_account = frappe.db.get_value(
         "Mode of Payment Account",
-        {"parent": payment_mode, "company": doc.company},
+        {"parent": mode_of_payment, "company": doc.company},
         "default_account",
     )
     if not paid_account:
         frappe.throw(
             _("Default Account is required for Mode of Payment {0} in Company {1}.")
-            .format(payment_mode, doc.company or "")
+            .format(mode_of_payment, doc.company or "")
         )
 
     total_amount = flt(doc.rounded_total or doc.grand_total or 0)
@@ -137,7 +157,7 @@ def create_payment_entry_for_cash(doc, method=None):
     pe = frappe.new_doc("Payment Entry")
     pe.company = doc.company
     pe.posting_date = doc.posting_date
-    pe.mode_of_payment = payment_mode
+    pe.mode_of_payment = mode_of_payment
     pe.party_type = "Customer"
     pe.party = doc.customer
     pe.reference_date = doc.posting_date
