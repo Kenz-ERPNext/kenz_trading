@@ -160,7 +160,13 @@ def create_payment_entry_for_cash(doc, method=None):
     pe.mode_of_payment = mode_of_payment
     pe.party_type = "Customer"
     pe.party = doc.customer
-    pe.reference_date = doc.posting_date
+    # pe.reference_date = doc.posting_date
+
+    if mode_of_payment == "Bank":
+        pe.reference_no = doc.name
+        pe.reference_date = doc.posting_date
+    else:
+        pe.reference_date = doc.posting_date
 
     if is_return:
         # REFUND: Pay-type — company pays cash back to customer
