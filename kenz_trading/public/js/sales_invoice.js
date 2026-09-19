@@ -102,23 +102,30 @@ frappe.ui.form.on("Sales Invoice", {
     },
 
 
-    onload: function(frm) {
+        onload: function(frm) {
 
-        // Set default mode of payment for new Cash invoices
-        if (frm.is_new()) {
-            if (frm.doc.custom_payment_mode === "Cash") {
-                frm.set_value('custom_mode_of_payment', 'Cash');
+            if (frm.is_new() && !frm.doc.custom_payment_mode) {
+
+                frappe.db.get_single_value(
+                    "Kenza Settings",
+                    "default_payment_mode"
+                ).then(value => {
+
+                    console.log("Kenza Default Payment Mode:", value);
+
+                    if (!value) return;
+
+                    frm.set_value("custom_payment_mode", value);
+
+                    if (value === "Cash") {
+                        frm.set_value("custom_mode_of_payment", "Cash");
+                    }
+                });
             }
-        }
 
-        // Always show project field regardless of POS mode
-        frm.set_df_property('project', 'hidden', 0);
-        // Set default warehouse on form load if update_stock is enabled
-        set_default_warehouse(frm);
-
-    },
-
-
+            frm.set_df_property('project', 'hidden', 0);
+            set_default_warehouse(frm);
+        },
 
     update_stock: function(frm) {
         // Set or clear warehouse when update_stock is toggled

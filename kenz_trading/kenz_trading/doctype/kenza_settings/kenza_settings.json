@@ -21,6 +21,7 @@
   "purchase_search_window",
   "item_qty_search_window",
   "auto_create_payment",
+  "default_payment_mode",
   "section_break_bkws",
   "restricted_users",
   "section_break_tdir",
@@ -372,13 +373,19 @@
    "fieldname": "create_payment_entry",
    "fieldtype": "Check",
    "label": "Create Payment Entry"
+  },
+  {
+   "fieldname": "default_payment_mode",
+   "fieldtype": "Select",
+   "label": "Default Payment Mode",
+   "options": "Cash\nCredit"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-04-13 13:05:13.420265",
+ "modified": "2026-09-19 17:58:05.297491",
  "modified_by": "Administrator",
  "module": "Kenz Trading",
  "name": "Kenza Settings",
