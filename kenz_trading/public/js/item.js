@@ -220,6 +220,10 @@ frappe.ui.form.on("Item", {
     // ==============================
     async validate(frm) {
 
+        // Only auto-fill the default tax row on a fresh item where the
+        // user hasn't already added/selected a Taxes row themselves.
+        if (frm.doc.taxes && frm.doc.taxes.length) return;
+
         // Fetch Kenza Settings
         let res = await frappe.db.get_doc(
             "Kenza Settings",
@@ -230,19 +234,17 @@ frappe.ui.form.on("Item", {
 
         let tax_category = res.tax_category;
         let tax_template = res.default_item_tax_template;
-        // let item_tax_templates = res.default__tax_template
 
         // // ------------------------------
         // // 1️⃣ CHILD TABLE TAXES
         // // ------------------------------
-        if (tax_category || tax_template) {
-
-            // Clear existing rows (optional)
-            frm.clear_table("taxes");
+        // Only add a default row when there's an actual Item Tax Template
+        // to use, otherwise we'd add a row that fails "required" validation.
+        if (tax_template) {
 
             let row = frm.add_child("taxes");
             row.item_tax_template = tax_template;
-            row.tax_category = tax_category;
+            if (tax_category) row.tax_category = tax_category;
 
             frm.refresh_field("taxes");
         }
