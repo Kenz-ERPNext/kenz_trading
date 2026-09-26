@@ -313,9 +313,8 @@ fixtures = [
                 "Sales Order-custom_sub_details",
                 "Sales Order-custom_total",
 
-                "Purchase Invoice-custom_new",
-                "Purchase Invoice-custom_a",
-                "Purchase Invoice-custom_b",
+                "Purchase Invoice-custom_column_break_yrofg",
+                "Purchase Invoice-custom_column_break_vej7u",
                 "Purchase Invoice-custom_sub_details",
                 "Purchase Invoice-custom_totals_kenz",
 
@@ -381,12 +380,11 @@ fixtures = [
                     "Customer-custom_vat_registration_number-allow_in_quick_entry",
                     "Purchase Invoice-update_stock-default",
                     "Sales Invoice-update_stock-default",
-
-                    "Purchase Invoice-main-field_order",
                     "Sales Invoice-main-field_order",
                     "Sales Invoice Item-main-field_order",
                     "Sales Invoice-is_pos-default",
                     "Purchase Invoice-main-field_order"
+                    
 
                 ]]
 
