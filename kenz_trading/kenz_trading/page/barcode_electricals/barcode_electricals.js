@@ -5,8 +5,8 @@ frappe.pages["barcode-electricals"].on_page_load = function (wrapper) {
 frappe.provide("kenz_trading");
 
 kenz_trading.BarcodeElectricals = class BarcodeElectricals {
-	static LABEL_WIDTH_MM = 30;
-	static LABEL_HEIGHT_MM = 20;
+	static LABEL_WIDTH_MM = 50;
+	static LABEL_HEIGHT_MM = 25;
 
 	constructor(wrapper) {
 		this.page = frappe.ui.make_app_page({
@@ -316,8 +316,8 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 		JsBarcode(svg, value, {
 			format: "CODE128",
 			displayValue: true,
-			fontSize: 7,
-			height: 20,
+			fontSize: 10,
+			height: 36,
 			margin: 0,
 		});
 		return svg.outerHTML;
@@ -370,18 +370,18 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 					.label {
 						width: ${width}mm;
 						height: ${height}mm;
-						padding: 0.5mm;
+						padding: 0.8mm;
 						display: flex;
 						flex-direction: column;
 						align-items: center;
 						justify-content: center;
-						gap: 0.3mm;
+						gap: 0.4mm;
 						text-align: center;
 						page-break-after: always;
 						overflow: hidden;
 					}
 					.label .company-name {
-						font-size: 1.6mm;
+						font-size: 1.5mm;
 						font-weight: bold;
 						line-height: 1;
 						max-width: 100%;
@@ -390,7 +390,7 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 						text-overflow: ellipsis;
 					}
 					.label .item-name {
-						font-size: 2mm;
+						font-size: 1.8mm;
 						font-weight: bold;
 						line-height: 1;
 						max-width: 100%;
@@ -399,13 +399,13 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 						text-overflow: ellipsis;
 					}
 					.label svg {
-						width: 85%;
+						width: 90%;
 						height: auto;
-						max-height: 5.5mm;
+						max-height: 11mm;
 						margin-bottom: 0.5mm;
 					}
 					.label .price {
-						font-size: 2mm;
+						font-size: 1.8mm;
 						font-weight: bold;
 						line-height: 1;
 					}
