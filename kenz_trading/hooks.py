@@ -26,7 +26,23 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/kenz_trading/css/kenz_trading.css"
-# app_include_js = "/assets/kenz_trading/js/kenz_trading.js"
+
+# Quick Entry customizations (item_quick_entry.js / party_quick_entry.js) define
+# frappe.ui.form.ItemQuickEntryForm / SupplierQuickEntryForm / CustomerQuickEntryForm - global
+# slots Frappe checks no matter which page a Quick Entry dialog gets opened from (e.g. a "+" quick-
+# add on a Link field in some unrelated doctype's form), so these have to load on every page via
+# app_include_js rather than doctype_js, which only loads on that one doctype's own pages. Order
+# matters: item_inline_row.js must load before the three editors that use InlineRowForm, and those
+# before item_quick_entry.js / item_child_table_price_editor.js which construct them.
+app_include_js = [
+	"/assets/kenz_trading/js/item_inline_row.js",
+	"/assets/kenz_trading/js/item_uom_editor.js",
+	"/assets/kenz_trading/js/item_price_editor.js",
+	"/assets/kenz_trading/js/item_barcode_editor.js",
+	"/assets/kenz_trading/js/item_quick_entry.js",
+	"/assets/kenz_trading/js/item_child_table_price_editor.js",
+	"/assets/kenz_trading/js/party_quick_entry.js",
+]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/kenz_trading/css/kenz_trading.css"
@@ -175,6 +191,21 @@ doc_events = {
     #      "before_insert":"kenz_trading.events.customer.customer_auto_name"
     # },
 
+    "Supplier": {
+        "validate": "kenz_trading.events.quick_entry.stash_quick_entry_fields",
+    },
+    "Customer": {
+        "validate": "kenz_trading.events.quick_entry.stash_quick_entry_fields",
+    },
+    "Address": {
+        "before_insert": "kenz_trading.events.quick_entry.apply_quick_entry_fields",
+    },
+    "Contact": {
+        "before_insert": "kenz_trading.events.quick_entry.apply_quick_entry_fields",
+    },
+    "Item": {
+        "on_update": "kenz_trading.events.item.sync_price_list_rates",
+    },
 
     "Warehouse":{
         "validate":"kenz_trading.events.warehouse.validate_warehouse"
