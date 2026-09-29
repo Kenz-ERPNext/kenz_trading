@@ -273,8 +273,6 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 				<td>${frappe.utils.escape_html(row.uom)}</td>
 				<td><input type="number" class="form-control input-sm row-count" data-idx="${idx}" min="1" value="${row.count}" style="width: 70px;"></td>
 				<td>${format_currency(row.rate)}</td>
-				<td><input type="date" class="form-control input-sm row-expiry" data-idx="${idx}" value="${row.expiry_date || ""}" style="width: 140px;"></td>
-				<td><input type="date" class="form-control input-sm row-packing" data-idx="${idx}" value="${row.packing_date || ""}" style="width: 140px;"></td>
 				<td>${frappe.utils.escape_html(row.barcode)}</td>
 				<td><a href="#" class="text-danger" data-idx="${idx}">${__("Remove")}</a></td>
 			</tr>`
@@ -290,8 +288,6 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 						<th>${__("UOM")}</th>
 						<th>${__("Count")}</th>
 						<th>${__("Rate")}</th>
-						<th>${__("Expiry Date")}</th>
-						<th>${__("Packing Date")}</th>
 						<th>${__("Barcode")}</th>
 						<th></th>
 					</tr>
@@ -309,16 +305,6 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 			const idx = cint($(e.currentTarget).attr("data-idx"));
 			const val = cint($(e.currentTarget).val());
 			this.rows[idx].count = val > 0 ? val : 1;
-		});
-
-		this.$table_wrapper.find(".row-expiry").on("change", (e) => {
-			const idx = cint($(e.currentTarget).attr("data-idx"));
-			this.rows[idx].expiry_date = $(e.currentTarget).val();
-		});
-
-		this.$table_wrapper.find(".row-packing").on("change", (e) => {
-			const idx = cint($(e.currentTarget).attr("data-idx"));
-			this.rows[idx].packing_date = $(e.currentTarget).val();
 		});
 	}
 
@@ -437,7 +423,7 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 					.label {
 						width: ${width}mm;
 						height: ${height}mm;
-						padding: 3mm 2.5mm 2mm 2.5mm;
+						padding: 4mm 2.5mm 2mm 2.5mm;
 						display: flex;
 						flex-direction: column;
 						align-items: center;
@@ -447,11 +433,15 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 						page-break-after: always;
 						overflow: hidden;
 					}
+					.label:last-child {
+						page-break-after: auto;
+					}
 					.label .company-name {
 						font-family: Arial, sans-serif;
 						font-size: 2mm;
 						font-weight: bold;
 						line-height: 1;
+						margin-top: 0.5mm;
 						max-width: 100%;
 						white-space: nowrap;
 						overflow: hidden;
@@ -476,7 +466,7 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 }
 					.label .price {
 						font-family: Arial, sans-serif;
-						font-size: 2.8mm;
+						font-size: 3mm;
 						font-weight: bold;
 						line-height: 1;
 					}
