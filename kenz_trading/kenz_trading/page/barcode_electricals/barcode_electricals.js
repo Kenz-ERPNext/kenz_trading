@@ -448,6 +448,7 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 						overflow: hidden;
 					}
 					.label .company-name {
+						font-family: Arial, sans-serif;
 						font-size: 1.8mm;
 						font-weight: bold;
 						line-height: 1;
@@ -457,6 +458,7 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 						text-overflow: ellipsis;
 					}
 					.label .item-name {
+						font-family: Arial, sans-serif;
 						font-size: 2.2mm;
 						font-weight: bold;
 						line-height: 1;
@@ -473,7 +475,8 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 	margin: 0 auto 0.4mm auto;
 }
 					.label .price {
-						font-size: 2.2mm;
+						font-family: Arial, sans-serif;
+						font-size: 2.6mm;
 						font-weight: bold;
 						line-height: 1;
 					}
