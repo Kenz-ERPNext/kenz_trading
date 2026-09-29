@@ -77,18 +77,20 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 					label: __("Rate (SAR)"),
 					fieldtype: "Currency",
 				},
-				{ fieldtype: "Section Break" },
+				{ fieldtype: "Section Break", hidden: 1 },
 				{
 					fieldname: "expiry_date",
 					label: __("Expiry Date"),
 					fieldtype: "Date",
+					hidden: 1,
 				},
-				{ fieldtype: "Column Break" },
+				{ fieldtype: "Column Break", hidden: 1 },
 				{
 					fieldname: "packing_date",
 					label: __("Packing Date"),
 					fieldtype: "Date",
 					default: frappe.datetime.get_today(),
+					hidden: 1,
 				},
 			],
 		});
@@ -230,6 +232,13 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 
 		this.render_table();
 
+		this.reset_fields();
+	}
+
+	reset_fields() {
+		this.current_barcode = null;
+		this.current_barcode_type = null;
+		this.item_doc = null;
 		this.barcode_field.set_value("");
 		this.item_field.set_value("");
 		this.uom_field.set_value("");
@@ -480,6 +489,9 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 		print_window.document.write(html);
 		print_window.document.close();
 		print_window.focus();
+
+		this.reset_fields();
+
 		setTimeout(() => {
 			print_window.print();
 		}, 300);
