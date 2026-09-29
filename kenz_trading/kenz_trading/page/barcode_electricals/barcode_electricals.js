@@ -361,7 +361,10 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 		// Barcode
 		fontSize: 10,
 		height: 34,
-		margin: 0,
+		marginTop: 0,
+		marginRight: 0,
+		marginBottom: 4,
+		marginLeft: 0,
 
 		// Keep barcode itself centered
 		width: 2,
@@ -397,15 +400,6 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 
 		const width = BarcodeElectricals.LABEL_WIDTH_MM;
 		const height = BarcodeElectricals.LABEL_HEIGHT_MM;
-		// @page margin (below) carves this space out of every printed label;
-		// .label is sized to what's left so flex centering has a real box to
-		// center within (a bare 100% would resolve against body's auto height).
-		const margin_top = 1.5;
-		const margin_right = 2.5;
-		const margin_bottom = 2.5;
-		const margin_left = 2.5;
-		const content_width = width - margin_left - margin_right;
-		const content_height = height - margin_top - margin_bottom;
 		const company = frappe.defaults.get_default("company") || "";
 
 		let labels_html = "";
@@ -428,12 +422,13 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 			<head>
 				<title>${__("Barcode Labels")}</title>
 				<style>
-					@page { size: ${width}mm ${height}mm; margin: ${margin_top}mm ${margin_right}mm ${margin_bottom}mm ${margin_left}mm; }
+					@page { size: ${width}mm ${height}mm; margin: 0; }
 					* { box-sizing: border-box; }
 					body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
 					.label {
-						width: ${content_width}mm;
-						height: ${content_height}mm;
+						width: ${width}mm;
+						height: ${height}mm;
+						padding: 3mm 2.5mm 2mm 2.5mm;
 						display: flex;
 						flex-direction: column;
 						align-items: center;
