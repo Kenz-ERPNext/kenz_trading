@@ -143,6 +143,7 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 	async on_item_change() {
 		const item_code = this.item_field.get_value();
 		this.current_barcode = null;
+		this.current_barcode_type = null;
 		if (!item_code) {
 			this.item_name_field.set_value("");
 			return;
@@ -173,11 +174,13 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 		const item_code = this.item_field.get_value();
 		const uom = this.uom_field.get_value();
 		this.current_barcode = null;
+		this.current_barcode_type = null;
 
 		const barcodes = (this.item_doc && this.item_doc.barcodes) || [];
 		if (barcodes.length) {
 			const match = barcodes.find((b) => b.uom === uom) || barcodes.find((b) => !b.uom) || barcodes[0];
 			this.current_barcode = match.barcode;
+			this.current_barcode_type = match.barcode_type || "";
 		}
 
 		if (!item_code) return;
@@ -224,6 +227,7 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 			expiry_date: this.expiry_field.get_value(),
 			packing_date: this.packing_field.get_value(),
 			barcode: this.current_barcode,
+			barcode_type: this.current_barcode_type,
 		});
 
 		this.render_table();
@@ -311,17 +315,70 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 		});
 	}
 
-	render_barcode_svg(value) {
-		const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-		JsBarcode(svg, value, {
-			format: "CODE128",
-			displayValue: true,
-			fontSize: 10,
-			height: 36,
-			margin: 0,
-		});
-		return svg.outerHTML;
+	// Maps ERPNext's Item Barcode "Barcode Type" options to the symbologies
+	// JsBarcode actually ships (see JsBarcode.all.min.js). Types with no
+	// matching symbology (GS1, GTIN, ISBN variants, ISSN, JAN, PZN) fall back
+	// to a close equivalent, and CODE128 is the overall default. "EAN" (and
+	// no barcode_type at all) isn't a symbology on its own - it's resolved
+	// to EAN8/EAN13 by digit count in render_barcode_svg.
+	static BARCODE_TYPE_MAP = {
+		"UPC-A": "UPC",
+		"UPC": "UPC",
+		"CODE-39": "CODE39",
+		"EAN-12": "UPC",
+		"EAN-8": "EAN8",
+		"GS1": "CODE128",
+		"GTIN": "EAN13",
+		"ISBN": "EAN13",
+		"ISBN-10": "EAN13",
+		"ISBN-13": "EAN13",
+		"ISSN": "EAN13",
+		"JAN": "EAN13",
+		"PZN": "CODE39",
+	};
+
+	render_barcode_svg(value, barcode_type) {
+	const svg = document.createElementNS(
+		"http://www.w3.org/2000/svg",
+		"svg"
+	);
+
+	let format = BarcodeElectricals.BARCODE_TYPE_MAP[barcode_type];
+	if (!format) {
+		const digits = String(value || "").replace(/\D/g, "");
+		if (digits.length === 8) format = "EAN8";
+		else if (digits.length === 12 || digits.length === 13) format = "EAN13";
+		else format = "CODE128";
 	}
+
+	const options = {
+		displayValue: true,
+
+		// Barcode number/text
+		text: value,
+		textAlign: "center",
+		textPosition: "bottom",
+		textMargin: 2,
+
+		// Barcode
+		fontSize: 12,
+		height: 44,
+		margin: 0,
+
+		// Keep barcode itself centered
+		width: 2,
+	};
+
+	try {
+		JsBarcode(svg, value, { ...options, format });
+	} catch (e) {
+		// value doesn't fit the strict rules of its symbology (e.g. wrong
+		// digit count for EAN13/UPC) - CODE128 encodes any string.
+		JsBarcode(svg, value, { ...options, format: "CODE128" });
+	}
+
+	return svg.outerHTML;
+}
 
 	print_labels() {
 		// Selecting an item/barcode and hitting Print directly (without an explicit
@@ -346,7 +403,7 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 
 		let labels_html = "";
 		this.rows.forEach((row) => {
-			const svg = this.render_barcode_svg(row.barcode);
+			const svg = this.render_barcode_svg(row.barcode, row.barcode_type);
 			for (let i = 0; i < row.count; i++) {
 				labels_html += `
 					<div class="label">
@@ -370,7 +427,7 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 					.label {
 						width: ${width}mm;
 						height: ${height}mm;
-						padding: 0.8mm;
+						padding: 2mm;
 						display: flex;
 						flex-direction: column;
 						align-items: center;
@@ -381,7 +438,7 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 						overflow: hidden;
 					}
 					.label .company-name {
-						font-size: 1.5mm;
+						font-size: 2mm;
 						font-weight: bold;
 						line-height: 1;
 						max-width: 100%;
@@ -390,7 +447,7 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 						text-overflow: ellipsis;
 					}
 					.label .item-name {
-						font-size: 1.8mm;
+						font-size: 2.4mm;
 						font-weight: bold;
 						line-height: 1;
 						max-width: 100%;
@@ -399,13 +456,14 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 						text-overflow: ellipsis;
 					}
 					.label svg {
-						width: 90%;
-						height: auto;
-						max-height: 11mm;
-						margin-bottom: 0.5mm;
-					}
+	display: block;
+	width: 85%;
+	height: auto;
+	max-height: 13mm;
+	margin: 0 auto 0.5mm auto;
+}
 					.label .price {
-						font-size: 1.8mm;
+						font-size: 2.4mm;
 						font-weight: bold;
 						line-height: 1;
 					}
