@@ -369,7 +369,7 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 
 		// Barcode
 		fontSize: 10,
-		height: 34,
+		height: 40,
 		marginTop: 0,
 		marginRight: 0,
 		marginBottom: 4,
@@ -449,7 +449,7 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 					}
 					.label .company-name {
 						font-family: Arial, sans-serif;
-						font-size: 1.8mm;
+						font-size: 2mm;
 						font-weight: bold;
 						line-height: 1;
 						max-width: 100%;
@@ -459,7 +459,7 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 					}
 					.label .item-name {
 						font-family: Arial, sans-serif;
-						font-size: 2.2mm;
+						font-size: 2.4mm;
 						font-weight: bold;
 						line-height: 1;
 						max-width: 100%;
@@ -469,14 +469,14 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 					}
 					.label svg {
 	display: block;
-	width: 88%;
+	width: 92%;
 	height: auto;
-	max-height: 10mm;
+	max-height: 12mm;
 	margin: 0 auto 0.4mm auto;
 }
 					.label .price {
 						font-family: Arial, sans-serif;
-						font-size: 2.6mm;
+						font-size: 2.8mm;
 						font-weight: bold;
 						line-height: 1;
 					}
