@@ -160,8 +160,6 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 		this.pending_uom = null;
 		if (preferred_uom) {
 			this.uom_field.set_value(preferred_uom);
-		} else if (!this.uom_field.get_value()) {
-			this.uom_field.set_value(this.item_doc.stock_uom);
 		}
 		this.item_name_field.set_value(this.item_doc.item_name || "");
 		this.rate_field.set_value(this.item_doc.standard_rate || 0);
@@ -361,8 +359,8 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 		textMargin: 2,
 
 		// Barcode
-		fontSize: 12,
-		height: 44,
+		fontSize: 10,
+		height: 34,
 		margin: 0,
 
 		// Keep barcode itself centered
@@ -427,18 +425,18 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 					.label {
 						width: ${width}mm;
 						height: ${height}mm;
-						padding: 2mm;
+						padding: 2.5mm;
 						display: flex;
 						flex-direction: column;
 						align-items: center;
 						justify-content: center;
-						gap: 0.4mm;
+						gap: 0.3mm;
 						text-align: center;
 						page-break-after: always;
 						overflow: hidden;
 					}
 					.label .company-name {
-						font-size: 2mm;
+						font-size: 1.8mm;
 						font-weight: bold;
 						line-height: 1;
 						max-width: 100%;
@@ -447,7 +445,7 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 						text-overflow: ellipsis;
 					}
 					.label .item-name {
-						font-size: 2.4mm;
+						font-size: 2.2mm;
 						font-weight: bold;
 						line-height: 1;
 						max-width: 100%;
@@ -459,11 +457,11 @@ kenz_trading.BarcodeElectricals = class BarcodeElectricals {
 	display: block;
 	width: 85%;
 	height: auto;
-	max-height: 13mm;
-	margin: 0 auto 0.5mm auto;
+	max-height: 10mm;
+	margin: 0 auto 0.4mm auto;
 }
 					.label .price {
-						font-size: 2.4mm;
+						font-size: 2.2mm;
 						font-weight: bold;
 						line-height: 1;
 					}
