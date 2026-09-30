@@ -16,7 +16,12 @@ function set_child_table(doc, fieldname, rows) {
 	const child_doctype = frappe.get_meta(doc.doctype).fields.find(
 		(f) => f.fieldname === fieldname
 	).options;
-	frappe.model.clear_table(doc, fieldname);
+	// frappe.model.clear_table() deletes each existing row from `locals` first, and throws if a
+	// row is there without ever having been registered there (locals[row.doctype] undefined) -
+	// exactly the case update_doc() below calls this for. Resetting the array directly skips
+	// that lookup - fine here since every row is about to be fully replaced via add_child()
+	// anyway, registered or not.
+	doc[fieldname] = [];
 	rows.forEach((row) => {
 		const child = frappe.model.add_child(doc, child_doctype, fieldname);
 		Object.assign(child, row);
