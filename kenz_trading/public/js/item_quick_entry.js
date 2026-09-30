@@ -216,6 +216,20 @@ frappe.ui.form.ItemQuickEntryForm = class ItemQuickEntryForm extends (
 		}
 	}
 
+	// update_doc() copies the dialog's values onto the doc, and for the Units of Measure grid that
+	// means plain row objects (no doctype / name, never registered in `locals`). That's harmless for
+	// the insert, but "Edit Full Form" opens the doc with those rows as-is, and the full form's grid
+	// then throws on "Add Row" (GridRow.refresh reads locals[doctype][name] of a row that was never
+	// registered). Rebuild the rows through add_child() so the full form can edit them.
+	update_doc() {
+		const doc = super.update_doc();
+		const rows = doc.uoms || [];
+		if (rows.some((row) => !row.name || !locals[row.doctype || ""]?.[row.name])) {
+			set_child_table(doc, "uoms", rows.map(({ uom, conversion_factor }) => ({ uom, conversion_factor })));
+		}
+		return doc;
+	}
+
 	insert() {
 		if (this.uses_ksa_vat_tax_template) {
 			// custom_item_tax_template is a real field, saved as part of the doc as-is; ksa_vat's
