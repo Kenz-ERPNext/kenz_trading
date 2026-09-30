@@ -339,7 +339,8 @@ before_request = ["kenz_trading.patches.monkey_patches.apply"]
 
 
 after_migrate = [
-    "kenz_trading.patches.field_order.execute"
+    "kenz_trading.patches.field_order.execute",
+    "kenz_trading.patches.remove_broken_additional_ids_field.execute"
 ]
 
 
