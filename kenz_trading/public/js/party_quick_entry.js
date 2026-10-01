@@ -203,7 +203,7 @@ $(() => {
 					},
 					erpnext_fields.state,
 					erpnext_fields.pincode,
-					{ ...erpnext_fields.country, default: frappe.sys_defaults.country },
+					{ ...(erpnext_fields.country_address || erpnext_fields.country), default: frappe.sys_defaults.country },
 					column(),
 					{
 						label: __("Phone"),
@@ -272,8 +272,10 @@ $(() => {
 						fieldtype: "Link",
 						options: "Gender",
 					},
-					erpnext_fields.customer_pos_id,
-				];
+					// a real Customer field; newer ERPNext no longer lists it in the quick entry variant fields
+					erpnext_fields.customer_pos_id ||
+						this.meta.fields.find((f) => f.fieldname === "customer_pos_id"),
+				].filter(Boolean);
 			}
 		};
 
