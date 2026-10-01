@@ -16,7 +16,13 @@ function set_child_table(doc, fieldname, rows) {
 	const child_doctype = frappe.get_meta(doc.doctype).fields.find(
 		(f) => f.fieldname === fieldname
 	).options;
-	frappe.model.clear_table(doc, fieldname);
+	// Not frappe.model.clear_table(): on some Frappe versions it does locals[d.doctype][d.name]
+	// for every existing row, which throws for the plain row objects a bare Dialog's grid
+	// produces (no doctype / name). Unregister only rows that really are in `locals`.
+	(doc[fieldname] || []).forEach((d) => {
+		if (d && d.doctype && d.name && locals[d.doctype]) delete locals[d.doctype][d.name];
+	});
+	doc[fieldname] = [];
 	rows.forEach((row) => {
 		const child = frappe.model.add_child(doc, child_doctype, fieldname);
 		Object.assign(child, row);
