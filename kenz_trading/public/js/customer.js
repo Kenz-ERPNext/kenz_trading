@@ -48,8 +48,8 @@ frappe.ui.form.on("Customer", {
         frm.refresh_field("custom_additional_ids");
     },
 
-    custom_cr_no: function (frm) {
-        let cr = frm.doc.custom_cr_no;
+    custom_crn_no: function (frm) {
+        let cr = frm.doc.custom_crn_no;
         if (cr) {
             // Update / Insert CRN in custom_additional_ids
             let found = false;
@@ -74,8 +74,8 @@ frappe.ui.form.on("Customer", {
         if (frm.doc.custom_vat_registration_number && !frm.doc.tax_id) {
             frm.trigger("custom_vat_registration_number");
         }
-        if (frm.doc.custom_cr_no) {
-            frm.trigger("custom_cr_no");
+        if (frm.doc.custom_crn_no) {
+            frm.trigger("custom_crn_no");
         }
     }
 });
