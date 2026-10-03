@@ -25,7 +25,7 @@ $(() => {
 				const target_fieldnames = [
 					`custom_${party}_name_arabic`,
 					"custom_vat_registration_number",
-					"custom_cr_no",
+					"custom_crn_no",
 				];
 				// Supplier has no custom_vat_registration_number to auto-fill it from (see
 				// insert() below), so it needs its own Tax ID field instead. Customer already
@@ -125,9 +125,9 @@ $(() => {
 					}
 				}
 
-				// same sync for the custom_cr_no field: mirror it into the "Additional IDs" CRN
+				// same sync for the custom_crn_no field: mirror it into the "Additional IDs" CRN
 				// row (if that child table is present here too).
-				const cr_no = this.dialog.get_value("custom_cr_no");
+				const cr_no = this.dialog.get_value("custom_crn_no");
 				if (cr_no && additional_ids_df) {
 					let row = this.dialog.doc.custom_additional_ids.find((r) => r.type_code === "CRN");
 					if (!row) {
