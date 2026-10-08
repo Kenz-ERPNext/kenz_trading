@@ -33,13 +33,19 @@ def rename_cr_no_to_crn_no(doctype):
             (new_name, old_name),
         )
 
-    # property setters (quick entry flag, field order) that point at the old fieldname
-    frappe.db.sql(
-        """update `tabProperty Setter` set field_name='custom_crn_no',
-        name=replace(name, 'custom_cr_no', 'custom_crn_no')
-        where doc_type=%s and field_name='custom_cr_no'""",
-        doctype,
-    )
+    # property setters (e.g. the quick entry flag) that point at the old fieldname: rename them,
+    # or drop them if the fixture sync already created the new one (name is the primary key)
+    for ps in frappe.get_all(
+        "Property Setter", filters={"doc_type": doctype, "field_name": "custom_cr_no"}, pluck="name"
+    ):
+        new_ps = ps.replace("custom_cr_no", "custom_crn_no")
+        if frappe.db.exists("Property Setter", new_ps):
+            frappe.db.delete("Property Setter", {"name": ps})
+        else:
+            frappe.db.sql(
+                "update `tabProperty Setter` set name=%s, field_name='custom_crn_no' where name=%s",
+                (new_ps, ps),
+            )
     frappe.db.sql(
         """update `tabProperty Setter` set value=replace(value, '"custom_cr_no"', '"custom_crn_no"')
         where doc_type=%s and property='field_order'""",
