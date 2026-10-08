@@ -379,7 +379,7 @@ fixtures = [
                 "Purchase Invoice-custom_sub_details",
                 "Purchase Invoice-custom_totals_kenz",
 
-                "Company-custom_cr_no",
+                "Company-custom_crn_no",
                 "Customer-custom_crn_no",
 
                 "Sales Invoice-custom_additional_information",
