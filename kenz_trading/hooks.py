@@ -351,7 +351,7 @@ fixtures = [
                 "Purchase Invoice-custom_totals_kenz",
 
                 "Company-custom_cr_no",
-                "Customer-custom_crn_no",
+                "Customer-custom_cr_no",
 
                 "Sales Invoice-custom_additional_information",
                 "Sales Invoice-custom_attention",
@@ -408,7 +408,7 @@ fixtures = [
                     "Purchase Invoice-sec_warehouse-collapsible",
          
                     "Item-custom_branch_list-ignore_user_permissions",
-                    "Customer-custom_crn_no-allow_in_quick_entry",
+                    "Customer-custom_cr_no-allow_in_quick_entry",
                     "Customer-custom_vat_registration_number-allow_in_quick_entry",
                     "Purchase Invoice-update_stock-default",
                     "Sales Invoice-update_stock-default",
