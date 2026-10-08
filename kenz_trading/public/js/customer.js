@@ -30,8 +30,8 @@ frappe.ui.form.on("Customer", {
     //     frm.refresh_field("custom_additional_ids");
     // },
 
-    custom_crn_no: function (frm) {
-        let cr = frm.doc.custom_crn_no;
+    custom_cr_no: function (frm) {
+        let cr = frm.doc.custom_cr_no;
         if (is_valid(cr)) {
             let found = false;
             (frm.doc.custom_additional_ids || []).forEach(row => {
@@ -62,9 +62,9 @@ frappe.ui.form.on("Customer", {
                 frm.set_value("tax_id", "");
             }
         }
-        if (!is_valid(frm.doc.custom_crn_no)) {
-            if (frm.doc.custom_crn_no && frm.doc.custom_crn_no.trim().toUpperCase() === "NULL") {
-                frm.set_value("custom_crn_no", "");
+        if (!is_valid(frm.doc.custom_cr_no)) {
+            if (frm.doc.custom_cr_no && frm.doc.custom_cr_no.trim().toUpperCase() === "NULL") {
+                frm.set_value("custom_cr_no", "");
             }
         }
 
@@ -84,8 +84,8 @@ frappe.ui.form.on("Customer", {
         if (is_valid(frm.doc.custom_vat_registration_number) && !frm.doc.tax_id) {
             frm.trigger("custom_vat_registration_number");
         }
-        if (is_valid(frm.doc.custom_crn_no)) {
-            frm.trigger("custom_crn_no");
+        if (is_valid(frm.doc.custom_cr_no)) {
+            frm.trigger("custom_cr_no");
         }
     }
 });
