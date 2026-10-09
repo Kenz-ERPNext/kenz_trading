@@ -415,7 +415,12 @@ fixtures = [
                     "Sales Invoice-main-field_order",
                     "Sales Invoice Item-main-field_order",
                     "Sales Invoice-is_pos-default",
-                    "Purchase Invoice-main-field_order"
+                    "Purchase Invoice-main-field_order",
+                    "Purchase Invoice-tax_id-in_list_view",
+                    "Purchase Invoice-tax_id-in_standard_filter",
+                    "Supplier-main-search_fields",
+                    "Purchase Invoice-tax_id-fieldtype",
+                    "Purchase Invoice-tax_id-read_only",
                     
 
                 ]]

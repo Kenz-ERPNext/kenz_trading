@@ -66,5 +66,25 @@ frappe.ui.form.on('Purchase Invoice', {
             frm.set_value('paid_amount', frm.doc.rounded_total || 0);
             frm.refresh_field('paid_amount');
         }
+    },
+
+    // Typing a Tax ID picks the supplier that has it. Selecting a supplier also fetches
+    // its tax_id into this field, so skip when the current supplier already matches.
+    tax_id(frm) {
+        const tax_id = (frm.doc.tax_id || '').trim();
+        if (!tax_id) return;
+        frappe.db.get_list('Supplier', {
+            filters: { tax_id: tax_id, disabled: 0 },
+            fields: ['name'],
+            limit: 0
+        }).then((suppliers) => {
+            const names = suppliers.map((s) => s.name);
+            if (names.includes(frm.doc.supplier)) return;
+            if (!names.length) {
+                frappe.msgprint(__('No supplier found with Tax ID {0}', [tax_id]));
+            } else {
+                frm.set_value('supplier', names[0]);
+            }
+        });
     }
 });
