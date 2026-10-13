@@ -177,6 +177,11 @@ def create_payment_entry_for_cash(doc, method=None):
     pe.paid_amount = abs_amount
     pe.received_amount = abs_amount
 
+    if "bank" in (payment_mode or "").lower():
+        pe.reference_no = doc.name
+        pe.reference_date = doc.posting_date
+
+
     pe.append("references", {
         "reference_doctype": "Sales Invoice",
         "reference_name": doc.name,
