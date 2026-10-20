@@ -177,18 +177,30 @@ def create_payment_entry_for_cash(doc, method=None):
     pe.paid_amount = abs_amount
     pe.received_amount = abs_amount
 
-    if "bank" in (payment_mode or "").lower():
+    paid_from_type = frappe.db.get_value(
+    "Account", pe.paid_from, "account_type"
+    )
+    paid_to_type = frappe.db.get_value(
+        "Account", pe.paid_to, "account_type"
+    )
+
+    mode_name = (pe.mode_of_payment or "").lower()
+
+    if (
+        "Bank" in (paid_from_type, paid_to_type)
+        or "bank" in mode_name
+        or "bank" in (payment_mode or "").lower()
+    ):
+        
         pe.reference_no = doc.name
         pe.reference_date = doc.posting_date
-
-
-    pe.append("references", {
-        "reference_doctype": "Sales Invoice",
-        "reference_name": doc.name,
-        "total_amount": doc.grand_total,
-        "outstanding_amount": total_amount,    # preserves sign
-        "allocated_amount": total_amount,      # preserves sign
-    })
+        pe.append("references", {
+            "reference_doctype": "Sales Invoice",
+            "reference_name": doc.name,
+            "total_amount": doc.grand_total,
+            "outstanding_amount": total_amount,    # preserves sign
+            "allocated_amount": total_amount,      # preserves sign
+        })
 
     pe.insert(ignore_permissions=True)
     pe.submit()
