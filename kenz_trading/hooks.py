@@ -42,6 +42,7 @@ app_include_js = [
 	"/assets/kenz_trading/js/item_quick_entry.js",
 	"/assets/kenz_trading/js/item_child_table_price_editor.js",
 	"/assets/kenz_trading/js/party_quick_entry.js",
+    "/assets/kenz_trading/js/language.js", "kenz_trading.bundle.js",
 ]
 
 # include js, css files in header of web template
