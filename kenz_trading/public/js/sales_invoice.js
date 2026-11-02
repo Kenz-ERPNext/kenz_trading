@@ -102,13 +102,30 @@ frappe.ui.form.on("Sales Invoice", {
 
     onload: function(frm) {
 
+        // Set default payment mode for new Sales Invoice
+        if (frm.is_new() && !frm.doc.custom_payment_mode) {
 
+            frappe.db.get_single_value(
+                "Kenza Settings",
+                "default_payment_mode"
+            ).then(value => {
 
-        // Always show project field regardless of POS mode
+                console.log("Kenza Default Payment Mode:", value);
+
+                if (!value) return;
+
+                frm.set_value("custom_payment_mode", value);
+
+                if (value === "Cash") {
+                    frm.set_value("custom_mode_of_payment", "Cash");
+                }
+            });
+        }
+
+        // Always show project field
         frm.set_df_property('project', 'hidden', 0);
-        // Set default warehouse on form load — skip submitted/cancelled docs,
-        // Frappe blocks Source Warehouse change after submit (saw on SI-00597
-        // 2026-06-17: clearing it on open triggered UpdateAfterSubmitError).
+
+        // Set default warehouse only for draft invoices
         if (frm.doc.docstatus === 0) {
             set_default_warehouse(frm);
         }

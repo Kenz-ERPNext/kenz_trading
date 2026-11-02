@@ -22,6 +22,7 @@
   "purchase_search_window",
   "item_qty_search_window",
   "auto_create_payment",
+  "default_payment_mode",
   "section_break_bbjp",
   "enable_bulk_edit",
   "section_break_bkws",
@@ -259,13 +260,19 @@
    "fieldname": "enable_bulk_edit",
    "fieldtype": "Check",
    "label": "Enable Bulk Print"
+  },
+  {
+   "fieldname": "default_payment_mode",
+   "fieldtype": "Select",
+   "label": "Default Payment Mode",
+   "options": "Cash\nCredit"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-02-25 14:19:31.705504",
+ "modified": "2026-11-02 15:50:04.578526",
  "modified_by": "Administrator",
  "module": "Kenz Trading",
  "name": "Kenza Settings",
