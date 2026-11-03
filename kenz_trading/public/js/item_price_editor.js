@@ -104,8 +104,8 @@ frappe.kenz_trading.ItemPriceEditor = class ItemPriceEditor {
 			{ label: __("Rate"), fieldname: "rate", fieldtype: "Currency", reqd: 1 },
 			...(this.show_sale_price_limits
 				? [
-						{ label: __("Max Price"), fieldname: "max_rate", fieldtype: "Currency" },
 						{ label: __("Min Price"), fieldname: "min_rate", fieldtype: "Currency" },
+						{ label: __("Max Price"), fieldname: "max_rate", fieldtype: "Currency" },
 					]
 				: []),
 		];
@@ -174,8 +174,8 @@ frappe.kenz_trading.ItemPriceEditor = class ItemPriceEditor {
 					<div class="bold">${frappe.utils.escape_html(p.price_list)}</div>
 					<div class="text-muted small">${frappe.utils.escape_html(p.uom)}${
 						this.show_sale_price_limits
-							? ` · ${__("Max")} ${format_currency(p.max_rate || 0)} · ${__("Min")} ${format_currency(
-									p.min_rate || 0
+							? ` · ${__("Min")} ${format_currency(p.min_rate || 0)} · ${__("Max")} ${format_currency(
+									p.max_rate || 0
 								)}`
 							: ""
 					}</div>
