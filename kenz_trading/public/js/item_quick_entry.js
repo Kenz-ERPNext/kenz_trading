@@ -204,6 +204,7 @@ frappe.ui.form.ItemQuickEntryForm = class ItemQuickEntryForm extends (
 			get_stock_uom: () => this.dialog.get_value("stock_uom"),
 			get_conversion_factor,
 			get_uom_options,
+			show_sale_price_limits: true,
 		});
 		this.price_editor.make(this.dialog.fields_dict.quick_entry_prices_html.wrapper);
 

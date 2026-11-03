@@ -197,13 +197,28 @@ def sync_price_list_rates(doc, method=None):
 	if prices_json is None:
 		return
 
+	# per row max / min price (only sent by the Item Quick Entry) -> Item Price's own fields,
+	# whose fieldnames differ between sites
+	item_price_meta = frappe.get_meta("Item Price")
+	limit_fields = {
+		key: next((f for f in candidates if item_price_meta.has_field(f)), None)
+		for key, candidates in (
+			("max_rate", ("custom_maximum_price", "custom_maximum_rate")),
+			("min_rate", ("custom_minimum_price", "custom_minimum_rate")),
+		)
+	}
+
 	wanted = {}
 	for price in frappe.parse_json(prices_json or "[]"):
 		price_list = price.get("price_list")
 		if not price_list:
 			continue
 		uom = price.get("uom") or doc.stock_uom
-		wanted[(price_list, uom)] = flt(price.get("rate"))
+		values = {"price_list_rate": flt(price.get("rate"))}
+		for key, fieldname in limit_fields.items():
+			if fieldname and key in price:
+				values[fieldname] = flt(price.get(key))
+		wanted[(price_list, uom)] = values
 
 	existing = frappe.get_all(
 		"Item Price",
@@ -216,11 +231,11 @@ def sync_price_list_rates(doc, method=None):
 		key = (row.price_list, row.uom or doc.stock_uom)
 		if key in wanted:
 			seen.add(key)
-			frappe.db.set_value("Item Price", row.name, "price_list_rate", wanted[key])
+			frappe.db.set_value("Item Price", row.name, wanted[key])
 		else:
 			frappe.delete_doc("Item Price", row.name, ignore_permissions=True)
 
-	for (price_list, uom), rate in wanted.items():
+	for (price_list, uom), values in wanted.items():
 		if (price_list, uom) in seen:
 			continue
 		frappe.get_doc(
@@ -229,7 +244,7 @@ def sync_price_list_rates(doc, method=None):
 				"item_code": doc.name,
 				"uom": uom,
 				"price_list": price_list,
-				"price_list_rate": rate,
 				"currency": frappe.db.get_value("Price List", price_list, "currency"),
+				**values,
 			}
 		).insert(ignore_permissions=True)

@@ -5,8 +5,11 @@ frappe.provide("frappe.kenz_trading");
 // (item_child_table_price_editor.js), so editing an item's prices looks and behaves the same
 // everywhere. Barcodes are a separate list - see item_barcode_editor.js.
 frappe.kenz_trading.ItemPriceEditor = class ItemPriceEditor {
-	constructor({ get_stock_uom, get_conversion_factor, get_uom_options, on_change }) {
+	constructor({ get_stock_uom, get_conversion_factor, get_uom_options, on_change, show_sale_price_limits }) {
 		this.get_stock_uom = get_stock_uom;
+		// per row Max / Min Price (Item Price's own max / min price fields) - only the Item Quick
+		// Entry turns this on; rows without them leave those Item Price fields untouched on save
+		this.show_sale_price_limits = !!show_sale_price_limits;
 		// looks up the conversion factor already set for a UOM in the Units of Measure list -
 		// there's no Conversion Factor field here, a UOM other than the stock one has to be
 		// added there first.
@@ -41,21 +44,38 @@ frappe.kenz_trading.ItemPriceEditor = class ItemPriceEditor {
 		(item_doc.uoms || []).forEach((u) => (conversion_by_uom[u.uom] = u.conversion_factor));
 
 		this.add_button.prop("disabled", true);
-		this.ready = frappe.db
-			.get_list("Item Price", {
-				filters: { item_code: item_doc.name },
-				fields: ["uom", "price_list", "price_list_rate"],
-				limit: 0,
+		// Item Price's max / min fieldnames differ between sites, only ask for the ones that exist
+		const limit_fields = {};
+		this.ready = (this.show_sale_price_limits ? frappe.model.with_doctype("Item Price") : Promise.resolve())
+			.then(() => {
+				if (this.show_sale_price_limits) {
+					limit_fields.max_rate = ["custom_maximum_price", "custom_maximum_rate"].find((f) =>
+						frappe.meta.has_field("Item Price", f)
+					);
+					limit_fields.min_rate = ["custom_minimum_price", "custom_minimum_rate"].find((f) =>
+						frappe.meta.has_field("Item Price", f)
+					);
+				}
+				return frappe.db.get_list("Item Price", {
+					filters: { item_code: item_doc.name },
+					fields: ["uom", "price_list", "price_list_rate", ...Object.values(limit_fields).filter(Boolean)],
+					limit: 0,
+				});
 			})
 			.then((rows) => {
 				this.prices = rows.map((row) => {
 					const uom = row.uom || stock_uom;
-					return {
+					const price = {
 						uom,
 						conversion_factor: uom === stock_uom ? 1 : conversion_by_uom[uom],
 						price_list: row.price_list,
 						rate: row.price_list_rate,
 					};
+					if (this.show_sale_price_limits) {
+						price.max_rate = limit_fields.max_rate ? row[limit_fields.max_rate] : 0;
+						price.min_rate = limit_fields.min_rate ? row[limit_fields.min_rate] : 0;
+					}
+					return price;
 				});
 				this.render();
 			})
@@ -82,6 +102,12 @@ frappe.kenz_trading.ItemPriceEditor = class ItemPriceEditor {
 				get_query: () => ({ filters: { enabled: 1 } }),
 			},
 			{ label: __("Rate"), fieldname: "rate", fieldtype: "Currency", reqd: 1 },
+			...(this.show_sale_price_limits
+				? [
+						{ label: __("Max Price"), fieldname: "max_rate", fieldtype: "Currency" },
+						{ label: __("Min Price"), fieldname: "min_rate", fieldtype: "Currency" },
+					]
+				: []),
 		];
 	}
 
@@ -97,6 +123,10 @@ frappe.kenz_trading.ItemPriceEditor = class ItemPriceEditor {
 			price_list: values.price_list,
 			rate: values.rate,
 		};
+		if (this.show_sale_price_limits) {
+			price.max_rate = flt(values.max_rate);
+			price.min_rate = flt(values.min_rate);
+		}
 		const others = this.prices.filter((p, i) => i !== idx);
 		if (others.some((p) => p.uom === price.uom && p.price_list === price.price_list)) {
 			frappe.throw(__("{0} price for {1} is already added", [price.price_list, price.uom]));
@@ -142,7 +172,13 @@ frappe.kenz_trading.ItemPriceEditor = class ItemPriceEditor {
 			$(`<div class="border rounded p-2 mb-2 d-flex justify-content-between align-items-center">
 				<div>
 					<div class="bold">${frappe.utils.escape_html(p.price_list)}</div>
-					<div class="text-muted small">${frappe.utils.escape_html(p.uom)}</div>
+					<div class="text-muted small">${frappe.utils.escape_html(p.uom)}${
+						this.show_sale_price_limits
+							? ` · ${__("Max")} ${format_currency(p.max_rate || 0)} · ${__("Min")} ${format_currency(
+									p.min_rate || 0
+								)}`
+							: ""
+					}</div>
 				</div>
 				<div class="d-flex align-items-center">
 					<span class="bold mr-3">${format_currency(p.rate)}</span>
@@ -176,7 +212,12 @@ frappe.kenz_trading.ItemPriceEditor = class ItemPriceEditor {
 		return {
 			uoms: Object.entries(uoms).map(([uom, conversion_factor]) => ({ uom, conversion_factor })),
 			quick_entry_prices: JSON.stringify(
-				this.prices.map((p) => ({ uom: p.uom, price_list: p.price_list, rate: p.rate }))
+				this.prices.map((p) => ({
+					uom: p.uom,
+					price_list: p.price_list,
+					rate: p.rate,
+					...(this.show_sale_price_limits ? { max_rate: p.max_rate, min_rate: p.min_rate } : {}),
+				}))
 			),
 		};
 	}
