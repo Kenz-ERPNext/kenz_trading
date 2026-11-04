@@ -331,6 +331,41 @@ def execute():
             "label": "Minimum Sale Price",
             "insert_after": "custom_maximum_sale_price",
             "module": "Kenz Trading"
+        },
+        {
+            "doctype": "Custom Field",
+            "dt": "Purchase Invoice Item",
+            "fieldname": "tax_rate",
+            "fieldtype": "Float",
+            "label": "Tax Rate",
+            "insert_after": "item_tax_template",
+            "read_only": 1,
+            "print_hide": 1,
+            "module": "Kenz Trading"
+        },
+        {
+            "doctype": "Custom Field",
+            "dt": "Purchase Invoice Item",
+            "fieldname": "tax_amount",
+            "fieldtype": "Currency",
+            "label": "Tax Amount",
+            "options": "currency",
+            "insert_after": "tax_rate",
+            "read_only": 1,
+            "print_hide": 1,
+            "module": "Kenz Trading"
+        },
+        {
+            "doctype": "Custom Field",
+            "dt": "Purchase Invoice Item",
+            "fieldname": "total_amount",
+            "fieldtype": "Currency",
+            "label": "Total Amount",
+            "options": "currency",
+            "insert_after": "tax_amount",
+            "read_only": 1,
+            "print_hide": 1,
+            "module": "Kenz Trading"
         }
     ]
 

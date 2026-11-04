@@ -527,6 +527,10 @@ def fix_inclusive_tax_rounding(doc):
     inclusive_rate = 0.0
 
     for tax in doc.taxes:
+        # Purchase taxes: deducted / valuation-only rows don't follow the
+        # grand_total = net + tax relation this fix relies on
+        if tax.get("add_deduct_tax") == "Deduct" or tax.get("category") == "Valuation":
+            return
         if cint(tax.included_in_print_rate):
             has_inclusive = True
             inclusive_rate += flt(tax.rate)

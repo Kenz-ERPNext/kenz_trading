@@ -165,6 +165,7 @@ has_permission = {
 override_doctype_class = {
     "Sales Invoice Additional Fields": "kenz_trading.overrides.zatca_fix.CustomSalesInvoiceAdditionalFields",
     "Sales Invoice": "kenz_trading.overrides.sales_invoice_override.CustomSalesInvoice",
+    "Purchase Invoice": "kenz_trading.overrides.purchase_invoice_override.CustomPurchaseInvoice",
 }
 # Document Events
 # ---------------
