@@ -116,9 +116,9 @@ frappe.ui.form.on("Sales Invoice", {
 
                 frm.set_value("custom_payment_mode", value);
 
-                if (value === "Cash") {
-                    frm.set_value("custom_mode_of_payment", "Cash");
-                }
+                // if (value === "Cash") {
+                //     frm.set_value("custom_mode_of_payment", "Cash");
+                // }
             });
         }
 
