@@ -431,6 +431,11 @@ def on_submits(doc, method):
             # 7️⃣ Bypass validation
             reverse_pe.flags.ignore_validate = True
 
+            # validate() is skipped, so fill the totals it would set
+            # (total/base allocated, unallocated, difference) — submit's
+            # GL rounding check fails on None otherwise
+            reverse_pe.set_amounts()
+
             reverse_pe.insert(ignore_permissions=True)
             reverse_pe.submit()
 
