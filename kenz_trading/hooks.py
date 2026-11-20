@@ -180,6 +180,7 @@ doc_events = {
         "validate": "kenz_trading.events.quick_entry.stash_quick_entry_fields",
     },
     "Customer": {
+        "before_insert": "kenz_trading.events.customer.add_additional_buyer_ids",
         "validate": "kenz_trading.events.quick_entry.stash_quick_entry_fields",
     },
     "Address": {
