@@ -44,7 +44,9 @@
   "sales_taxes_and_charges_template",
   "default_item_tax_template",
   "quotation_section",
-  "enable_create_sales_invoice"
+  "enable_create_sales_invoice",
+  "cancellation_section",
+  "require_cancel_reason"
  ],
  "fields": [
   {
@@ -266,13 +268,25 @@
    "fieldtype": "Select",
    "label": "Default Payment Mode",
    "options": "Cash\nCredit"
+  },
+  {
+   "fieldname": "cancellation_section",
+   "fieldtype": "Section Break",
+   "label": "Cancellation"
+  },
+  {
+   "default": "0",
+   "description": "Ask for a reason before cancelling a Sales Invoice, Purchase Invoice, Payment Entry or Stock Entry",
+   "fieldname": "require_cancel_reason",
+   "fieldtype": "Check",
+   "label": "Require Cancel Reason"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-02 15:50:04.578526",
+ "modified": "2026-11-25 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Kenz Trading",
  "name": "Kenza Settings",

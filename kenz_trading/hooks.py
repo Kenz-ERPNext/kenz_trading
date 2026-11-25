@@ -42,6 +42,7 @@ app_include_js = [
 	"/assets/kenz_trading/js/item_quick_entry.js",
 	"/assets/kenz_trading/js/item_child_table_price_editor.js",
 	"/assets/kenz_trading/js/party_quick_entry.js",
+	"/assets/kenz_trading/js/cancel_reason.js",
     "/assets/kenz_trading/js/language.js", "kenz_trading.bundle.js",
 ]
 
@@ -202,7 +203,21 @@ doc_events = {
 
     "Sales Invoice":{
         "on_submit":"kenz_trading.events.sales_invoice.on_submits",
-        "has_permission": "kenz_trading.events.item.item_has_permission"
+        "has_permission": "kenz_trading.events.item.item_has_permission",
+        "before_cancel": "kenz_trading.events.cancel_reason.before_cancel",
+        "on_cancel": "kenz_trading.events.cancel_reason.on_cancel",
+    },
+    "Purchase Invoice": {
+        "before_cancel": "kenz_trading.events.cancel_reason.before_cancel",
+        "on_cancel": "kenz_trading.events.cancel_reason.on_cancel",
+    },
+    "Payment Entry": {
+        "before_cancel": "kenz_trading.events.cancel_reason.before_cancel",
+        "on_cancel": "kenz_trading.events.cancel_reason.on_cancel",
+    },
+    "Stock Entry": {
+        "before_cancel": "kenz_trading.events.cancel_reason.before_cancel",
+        "on_cancel": "kenz_trading.events.cancel_reason.on_cancel",
     },
 
 }
@@ -361,6 +376,10 @@ fixtures = [
                 "Company-custom_cr_no",
                 "Customer-custom_cr_no",
                 "Customer-custom_crn_no",
+                "Sales Invoice-custom_cancel_reason",
+                "Purchase Invoice-custom_cancel_reason",
+                "Payment Entry-custom_cancel_reason",
+                "Stock Entry-custom_cancel_reason",
 
                 "Sales Invoice-custom_additional_information",
                 "Sales Invoice-custom_attention",
