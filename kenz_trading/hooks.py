@@ -181,7 +181,10 @@ doc_events = {
     },
     "Customer": {
         "before_insert": "kenz_trading.events.customer.add_additional_buyer_ids",
-        "validate": "kenz_trading.events.quick_entry.stash_quick_entry_fields",
+        "validate": [
+            "kenz_trading.events.quick_entry.stash_quick_entry_fields",
+            "kenz_trading.events.customer.sync_cr_fields",
+        ],
     },
     "Address": {
         "before_insert": "kenz_trading.events.quick_entry.apply_quick_entry_fields",
@@ -317,7 +320,9 @@ before_job = ["kenz_trading.patches.monkey_patches.apply"]
 
 after_migrate = [
     "kenz_trading.patches.field_order.execute",
-    "kenz_trading.patches.remove_broken_additional_ids_field.execute"
+    "kenz_trading.patches.remove_broken_additional_ids_field.execute",
+    "kenz_trading.events.customer.backfill_cr_fields",
+    "kenz_trading.patches.item_barcodes_in_details.execute",
 ]
 
 
@@ -355,6 +360,7 @@ fixtures = [
 
                 "Company-custom_cr_no",
                 "Customer-custom_cr_no",
+                "Customer-custom_crn_no",
 
                 "Sales Invoice-custom_additional_information",
                 "Sales Invoice-custom_attention",

@@ -43,6 +43,8 @@
 #     doc.custom_custome_code = f"S{new_number:02d}"
 
 
+import frappe
+
 # Same rows ksa_compliance adds client-side on Customer refresh. Adding them on insert keeps the
 # form from going dirty ("Not Saved") when a customer created via quick entry/import is opened.
 ADDITIONAL_BUYER_IDS = (
@@ -66,10 +68,41 @@ def add_additional_buyer_ids(doc, method=None):
 
 	values = {
 		"TIN": doc.get("custom_vat_registration_number"),
-		"CRN": doc.get("custom_cr_no"),
+		"CRN": doc.get("custom_cr_no") or doc.get("custom_crn_no"),
 	}
 	for type_name, type_code in ADDITIONAL_BUYER_IDS:
 		doc.append(
 			"custom_additional_ids",
 			{"type_name": type_name, "type_code": type_code, "value": values.get(type_code)},
+		)
+
+
+def sync_cr_fields(doc, method=None):
+	"""Keep custom_cr_no (visible, used by forms and prints) and custom_crn_no (hidden, used by
+	the POS API) equal. Whichever one was changed in this save wins, including clearing it."""
+	if not (doc.meta.has_field("custom_cr_no") and doc.meta.has_field("custom_crn_no")):
+		return
+
+	cr, crn = doc.get("custom_cr_no") or "", doc.get("custom_crn_no") or ""
+	before = doc.get_doc_before_save()
+	if before and cr != (before.get("custom_cr_no") or ""):
+		value = cr
+	elif before and crn != (before.get("custom_crn_no") or ""):
+		value = crn
+	else:
+		value = cr or crn
+
+	doc.custom_cr_no = doc.custom_crn_no = value
+
+
+def backfill_cr_fields():
+	"""after_migrate (fixtures are synced by then): fill whichever of the two is empty."""
+	meta = frappe.get_meta("Customer")
+	if not (meta.has_field("custom_cr_no") and meta.has_field("custom_crn_no")):
+		return
+
+	for target, source in (("custom_crn_no", "custom_cr_no"), ("custom_cr_no", "custom_crn_no")):
+		frappe.db.sql(
+			f"""update `tabCustomer` set `{target}` = `{source}`
+			where ifnull(`{target}`, '') = '' and ifnull(`{source}`, '') != ''"""
 		)
